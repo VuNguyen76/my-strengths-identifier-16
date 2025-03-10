@@ -109,6 +109,28 @@ The main API endpoints are:
 - Users: `/api/users/*`
 - Admin endpoints: `/api/admin/*`
 
+## Troubleshooting Backend Issues
+
+If you encounter issues starting the backend:
+
+1. Make sure Java 17 is installed and set as your JAVA_HOME:
+```bash
+java -version
+```
+
+2. Verify that port 8081 is not in use by another application
+
+3. Check application logs for detailed error messages:
+```bash
+cd be
+./mvnw spring-boot:run > backend.log 2>&1
+```
+
+4. Database issues:
+   - The application uses an embedded SQLite database
+   - Check file permissions in the `be` directory
+   - The database file will be created at `be/spa.db`
+
 ## License
 
 This project is licensed under the MIT License

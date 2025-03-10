@@ -1,521 +1,361 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { format, isSameDay, addDays } from "date-fns";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { vi } from "date-fns/locale";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Check, Edit, Loader2, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
-import { PlusCircle, Trash2, Clock, User, Calendar as CalendarIcon } from "lucide-react";
-import { SPECIALISTS, TIME_SLOTS } from "@/components/booking/constants";
-import { Specialist } from "@/types/service";
+import { SPECIALISTS } from "@/components/booking/specialists";
+import { TIME_SLOTS } from "@/components/booking/constants";
 
-// Schedule entry schema
-const scheduleFormSchema = z.object({
-  specialistId: z.string({
-    required_error: "Vui lòng chọn chuyên viên",
-  }),
-  date: z.date({
-    required_error: "Vui lòng chọn ngày",
-  }),
-  slots: z.array(z.string()).min(1, {
-    message: "Vui lòng chọn ít nhất một khung giờ",
-  }),
-});
+const AdminSchedule = () => {
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [specialist, setSpecialist] = useState<string>("");
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [specialists, setSpecialists] = useState(SPECIALISTS);
+  const [isLoadingSpecialists, setIsLoadingSpecialists] = useState(true);
 
-type FormValues = z.infer<typeof scheduleFormSchema>;
+  useEffect(() => {
+    fetchSpecialists();
+  }, []);
 
-// Sample data for existing schedules
-const initialSchedules = [
-  {
-    id: "1",
-    specialistId: "1",
-    date: new Date(new Date().setHours(0, 0, 0, 0)), // Today
-    slots: ["09:00", "10:00", "14:00"]
-  },
-  {
-    id: "2",
-    specialistId: "2",
-    date: new Date(new Date().setHours(0, 0, 0, 0)), // Today
-    slots: ["11:00", "15:00", "16:00"]
-  },
-  {
-    id: "3",
-    specialistId: "1",
-    date: addDays(new Date().setHours(0, 0, 0, 0), 1), // Tomorrow
-    slots: ["09:00", "10:00", "11:00"]
-  },
-  {
-    id: "4",
-    specialistId: "3",
-    date: addDays(new Date().setHours(0, 0, 0, 0), 2), // Day after tomorrow
-    slots: ["14:00", "15:00"]
-  }
-];
+  const fetchSpecialists = async () => {
+    setIsLoadingSpecialists(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
 
-const Schedule = () => {
-  const [schedules, setSchedules] = useState(initialSchedules);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedSchedule, setSelectedSchedule] = useState<typeof initialSchedules[0] | null>(null);
-  const [activeTab, setActiveTab] = useState("calendar"); // "calendar" or "list"
-
-  // Create form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(scheduleFormSchema),
-    defaultValues: {
-      specialistId: "",
-      date: new Date(),
-      slots: [],
-    },
-  });
-
-  // Get schedules for the selected date
-  const getSchedulesForDate = (date: Date) => {
-    return schedules.filter(
-      (schedule) => isSameDay(new Date(schedule.date), date)
-    );
-  };
-
-  // Get specialist by ID
-  const getSpecialistById = (id: string): Specialist | undefined => {
-    return SPECIALISTS.find((specialist) => specialist.id === id);
-  };
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
-
-  const handleAddSchedule = (values: FormValues) => {
-    // Check if schedule already exists for this specialist and date
-    const existingScheduleIndex = schedules.findIndex(
-      schedule => 
-        schedule.specialistId === values.specialistId && 
-        isSameDay(new Date(schedule.date), values.date)
-    );
-    
-    if (existingScheduleIndex >= 0) {
-      // Update existing schedule
-      const updatedSchedules = [...schedules];
-      updatedSchedules[existingScheduleIndex] = {
-        ...updatedSchedules[existingScheduleIndex],
-        slots: values.slots
-      };
-      setSchedules(updatedSchedules);
-      toast.success("Lịch làm việc đã được cập nhật thành công!");
-    } else {
-      // Create new schedule
-      const newSchedule = {
-        id: Date.now().toString(),
-        specialistId: values.specialistId,
-        date: values.date,
-        slots: values.slots
-      };
-      setSchedules([...schedules, newSchedule]);
-      toast.success("Lịch làm việc mới đã được tạo thành công!");
-    }
-    
-    setIsAddDialogOpen(false);
-    form.reset();
-  };
-
-  const handleDeleteSchedule = () => {
-    if (selectedSchedule) {
-      setSchedules(schedules.filter(schedule => schedule.id !== selectedSchedule.id));
-      toast.success("Lịch làm việc đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setSelectedSchedule(null);
+      const response = await fetch('http://localhost:8081/api/specialists', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch specialists');
+      }
+      
+      const data = await response.json();
+      setSpecialists(data);
+    } catch (error) {
+      console.error('Error fetching specialists:', error);
+      toast.error('Không thể tải danh sách chuyên viên. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoadingSpecialists(false);
     }
   };
 
-  const openDeleteDialog = (schedule: typeof initialSchedules[0]) => {
-    setSelectedSchedule(schedule);
-    setIsDeleteDialogOpen(true);
-  };
+  const fetchSchedule = async () => {
+    if (!specialist || !date) return;
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const formattedDate = date.toISOString().split('T')[0];
+      
+      const response = await fetch(`http://localhost:8081/api/admin/specialists/${specialist}/schedule?date=${formattedDate}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch schedule');
+      }
+      
+      const data = await response.json();
+      setSchedule(data);
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
+      toast.error('Không thể tải lịch làm việc. Vui lòng thử lại sau.');
+      setSchedule([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Function to add/edit schedule for a specific specialist
-  const handleSpecialistSchedule = (specialistId: string) => {
-    form.reset({
-      specialistId: specialistId,
-      date: new Date(),
-      slots: [],
-    });
-    setIsAddDialogOpen(true);
+  useEffect(() => {
+    if (specialist && date) {
+      fetchSchedule();
+    }
+  }, [specialist, date]);
+
+  const handleAddTimeSlot = async (time: string) => {
+    if (!specialist || !date) {
+      toast.error("Vui lòng chọn chuyên viên và ngày");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const formattedDate = date.toISOString().split('T')[0];
+      
+      const response = await fetch(`http://localhost:8081/api/admin/specialists/${specialist}/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: formattedDate,
+          time: time,
+          available: true
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add time slot');
+      }
+      
+      fetchSchedule();
+      toast.success("Đã thêm khung giờ thành công");
+    } catch (error) {
+      console.error('Error adding time slot:', error);
+      toast.error('Không thể thêm khung giờ. Vui lòng thử lại sau.');
+    }
+  };
+
+  const handleRemoveTimeSlot = async (slotId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:8081/api/admin/schedule/${slotId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove time slot');
+      }
+      
+      fetchSchedule();
+      toast.success("Đã xóa khung giờ thành công");
+    } catch (error) {
+      console.error('Error removing time slot:', error);
+      toast.error('Không thể xóa khung giờ. Vui lòng thử lại sau.');
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Quản lý lịch làm việc</h1>
-        <Button onClick={() => {
-          form.reset({
-            specialistId: "",
-            date: new Date(),
-            slots: [],
-          });
-          setIsAddDialogOpen(true);
-        }}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Tạo lịch mới
-        </Button>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold tracking-tight">Quản lý lịch làm việc</h1>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Thêm mới nhanh
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Thêm khung giờ làm việc</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="quick-specialist">Chuyên viên</Label>
+                <Select onValueChange={(value) => setSpecialist(value)}>
+                  <SelectTrigger id="quick-specialist">
+                    <SelectValue placeholder="Chọn chuyên viên" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {specialists.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ngày</Label>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  className="border rounded-md"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quick-time">Khung giờ</Label>
+                <Select onValueChange={(value) => handleAddTimeSlot(value)}>
+                  <SelectTrigger id="quick-time">
+                    <SelectValue placeholder="Chọn giờ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="calendar">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            Lịch làm việc theo ngày
-          </TabsTrigger>
-          <TabsTrigger value="list">
-            <User className="mr-2 h-4 w-4" />
-            Lịch làm việc theo chuyên viên
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="calendar" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-5">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Chọn ngày</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    locale={vi}
-                    className="rounded-md border mx-auto"
-                  />
-                </CardContent>
-              </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Xem lịch làm việc</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <Label htmlFor="specialist-select">Chuyên viên</Label>
+              <Select 
+                onValueChange={setSpecialist} 
+                value={specialist}
+                disabled={isLoadingSpecialists}
+              >
+                <SelectTrigger id="specialist-select" className="mt-1.5">
+                  <SelectValue placeholder="Chọn chuyên viên" />
+                </SelectTrigger>
+                <SelectContent>
+                  {specialists.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="md:col-span-7">
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    Lịch làm việc ngày {format(selectedDate, "dd/MM/yyyy")}
-                  </CardTitle>
-                  <CardDescription>
-                    Hiển thị các khung giờ làm việc của chuyên viên
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {getSchedulesForDate(selectedDate).length > 0 ? (
-                    getSchedulesForDate(selectedDate).map((schedule) => {
-                      const specialist = getSpecialistById(schedule.specialistId);
-                      return (
-                        <div
-                          key={schedule.id}
-                          className="border rounded-md p-4 mb-4 relative"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="font-medium">{specialist?.name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {specialist?.role}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={() => openDeleteDialog(schedule)}
+            <div>
+              <Label>Ngày</Label>
+              <div className="mt-1.5">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  className="border rounded-md p-3"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border rounded-md">
+            {loading ? (
+              <div className="flex justify-center items-center p-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : specialist && date ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Ghi chú</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedule.length > 0 ? (
+                    schedule.map((slot) => (
+                      <TableRow key={slot.id}>
+                        <TableCell className="font-medium">{slot.time}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span className={`h-2.5 w-2.5 rounded-full mr-2 ${slot.available ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                            {slot.available ? 'Có sẵn' : 'Đã đặt'}
+                          </div>
+                        </TableCell>
+                        <TableCell>{slot.notes || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-4 w-4 mr-1" />
+                              Sửa
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-500"
+                              onClick={() => handleRemoveTimeSlot(slot.id)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash className="h-4 w-4 mr-1" />
+                              Xóa
                             </Button>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {schedule.slots.map((slot) => (
-                              <div
-                                key={slot}
-                                className="bg-primary/10 text-primary rounded px-2 py-1 text-sm flex items-center"
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                {slot}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })
+                        </TableCell>
+                      </TableRow>
+                    ))
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Không có lịch làm việc nào cho ngày này
-                    </div>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-10">
+                        Không có khung giờ nào. Hãy thêm khung giờ mới.
+                      </TableCell>
+                    </TableRow>
                   )}
-                </CardContent>
-              </Card>
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center p-10 text-gray-500">
+                Vui lòng chọn chuyên viên và ngày để xem lịch làm việc
+              </div>
+            )}
+          </div>
+
+          {specialist && date && (
+            <div className="mt-6">
+              <h3 className="font-medium mb-3">Thêm khung giờ mới</h3>
+              <div className="flex flex-wrap gap-2">
+                {TIME_SLOTS.map((time) => (
+                  <Button 
+                    key={time} 
+                    variant="outline"
+                    onClick={() => handleAddTimeSlot(time)}
+                    className="flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {time}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="list">
-          <div className="grid grid-cols-1 gap-6">
-            {SPECIALISTS.map((specialist) => (
-              <Card key={specialist.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>{specialist.name}</CardTitle>
-                      <CardDescription>{specialist.role}</CardDescription>
-                    </div>
-                    <Button
-                      onClick={() => handleSpecialistSchedule(specialist.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" /> Thêm lịch
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {schedules.filter(schedule => schedule.specialistId === specialist.id).length > 0 ? (
-                    <div className="space-y-4">
-                      {schedules
-                        .filter(schedule => schedule.specialistId === specialist.id)
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                        .map((schedule) => (
-                          <div
-                            key={schedule.id}
-                            className="border rounded-md p-4 relative"
-                          >
-                            <div className="flex justify-between items-center mb-2">
-                              <h3 className="font-medium">
-                                {format(new Date(schedule.date), "EEEE, dd/MM/yyyy", { locale: vi })}
-                              </h3>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    form.reset({
-                                      specialistId: schedule.specialistId,
-                                      date: new Date(schedule.date),
-                                      slots: schedule.slots,
-                                    });
-                                    setIsAddDialogOpen(true);
-                                  }}
-                                >
-                                  Sửa
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive"
-                                  onClick={() => openDeleteDialog(schedule)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {schedule.slots.map((slot) => (
-                                <div
-                                  key={slot}
-                                  className="bg-primary/10 text-primary rounded px-2 py-1 text-sm flex items-center"
-                                >
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {slot}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      Chuyên viên này chưa có lịch làm việc
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Add Schedule Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tạo lịch làm việc mới</DialogTitle>
-            <DialogDescription>
-              Thiết lập lịch làm việc cho chuyên viên.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAddSchedule)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="specialistId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chuyên viên</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn chuyên viên" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {SPECIALISTS.map((specialist) => (
-                          <SelectItem key={specialist.id} value={specialist.id}>
-                            {specialist.name} - {specialist.role}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Ngày làm việc</FormLabel>
-                    <FormControl>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        locale={vi}
-                        className="rounded-md border"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="slots"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel className="text-base">Khung giờ làm việc</FormLabel>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {TIME_SLOTS.map((slot) => (
-                        <FormField
-                          key={slot}
-                          control={form.control}
-                          name="slots"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={slot}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(slot)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, slot])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== slot
-                                            )
-                                          );
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer">
-                                  {slot}
-                                </FormLabel>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button type="submit">Lưu lịch làm việc</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa lịch</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa lịch làm việc này? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteSchedule} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default Schedule;
+export default AdminSchedule;

@@ -1,192 +1,164 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Calendar, Clock, DollarSign, Loader2, Users } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, CalendarDays, DollarSign, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { BOOKING_STATUSES } from "@/components/booking/constants";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+// Charts component
+import { Bar } from "recharts";
+import { Chart } from "@/components/ui/chart";
 
 const AdminDashboard = () => {
-  // Fetch dashboard statistics
-  const { data: stats, isLoading: loadingStats } = useQuery({
-    queryKey: ['adminDashboardStats'],
-    queryFn: async () => {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+    pendingBookings: 0
+  });
+  const [revenueData, setRevenueData] = useState([]);
+  const [bookingsData, setBookingsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
       const token = localStorage.getItem("token");
-      
       if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
+        toast.error("Bạn cần đăng nhập lại");
+        navigate("/admin/login");
+        return;
       }
-      
-      const response = await fetch('http://localhost:8081/api/admin/dashboard/stats', {
+
+      const response = await fetch('http://localhost:8081/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
       if (!response.ok) {
-        throw new Error("Không thể tải thống kê");
+        throw new Error('Failed to fetch dashboard data');
       }
       
-      return response.json();
-    }
-  });
-
-  // Fetch recent bookings
-  const { data: recentBookings, isLoading: loadingBookings } = useQuery({
-    queryKey: ['adminRecentBookings'],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
+      const data = await response.json();
       
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch('http://localhost:8081/api/admin/bookings/recent', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Update stats
+      setStats({
+        totalUsers: data.totalUsers || 0,
+        totalBookings: data.totalBookings || 0,
+        totalRevenue: data.totalRevenue || 0,
+        pendingBookings: data.pendingBookings || 0
       });
       
-      if (!response.ok) {
-        throw new Error("Không thể tải lịch đặt gần đây");
-      }
+      // Update chart data
+      setRevenueData(data.revenueData || []);
+      setBookingsData(data.bookingsData || []);
       
-      return response.json();
-    }
-  });
-
-  // Fetch popular services
-  const { data: popularServices, isLoading: loadingServices } = useQuery({
-    queryKey: ['adminPopularServices'],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.');
       
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch('http://localhost:8081/api/admin/services/popular', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Set empty data when API fails
+      setStats({
+        totalUsers: 0,
+        totalBookings: 0,
+        totalRevenue: 0,
+        pendingBookings: 0
       });
-      
-      if (!response.ok) {
-        throw new Error("Không thể tải dịch vụ phổ biến");
-      }
-      
-      return response.json();
-    }
-  });
-
-  const getStatusBadge = (status: string) => {
-    let className = "px-2 py-1 rounded-full text-xs font-medium ";
-    
-    switch (status) {
-      case BOOKING_STATUSES.CONFIRMED:
-        className += "bg-blue-100 text-blue-800";
-        return <span className={className}>Đã xác nhận</span>;
-      case BOOKING_STATUSES.COMPLETED:
-        className += "bg-green-100 text-green-800";
-        return <span className={className}>Hoàn thành</span>;
-      case BOOKING_STATUSES.CANCELLED:
-        className += "bg-red-100 text-red-800";
-        return <span className={className}>Đã hủy</span>;
-      case BOOKING_STATUSES.PENDING:
-        className += "bg-yellow-100 text-yellow-800";
-        return <span className={className}>Đang chờ</span>;
-      default:
-        className += "bg-gray-100 text-gray-800";
-        return <span className={className}>Không xác định</span>;
+      setRevenueData([]);
+      setBookingsData([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const isLoading = loadingStats || loadingBookings || loadingServices;
+  // Fallback data if API fails to return data
+  const fallbackRevenueData = [
+    { name: "T1", value: 0 },
+    { name: "T2", value: 0 },
+    { name: "T3", value: 0 },
+    { name: "T4", value: 0 },
+    { name: "T5", value: 0 },
+    { name: "T6", value: 0 },
+  ];
+
+  const fallbackBookingsData = [
+    { name: "T1", value: 0 },
+    { name: "T2", value: 0 },
+    { name: "T3", value: 0 },
+    { name: "T4", value: 0 },
+    { name: "T5", value: 0 },
+    { name: "T6", value: 0 },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Quản lý hệ thống</h1>
-      </div>
-      
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[200px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={fetchDashboardData}>
+            Làm mới
+          </Button>
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="analytics">Phân tích</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Người dùng
+                  Tổng số người dùng
                 </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+                <div className="text-2xl font-bold">{stats.totalUsers}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats?.userGrowth > 0 ? `+${stats?.userGrowth}%` : `${stats?.userGrowth}%`} so với tháng trước
+                  Tổng số người dùng đã đăng ký
                 </p>
               </CardContent>
             </Card>
-            
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Dịch vụ
+                  Lịch đặt chờ xử lý
+                </CardTitle>
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pendingBookings}</div>
+                <p className="text-xs text-muted-foreground">
+                  Cần xác nhận
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Tổng số lịch đặt
                 </CardTitle>
                 <BarChart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalServices || 0}</div>
+                <div className="text-2xl font-bold">{stats.totalBookings}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats?.serviceGrowth > 0 ? `+${stats?.serviceGrowth}%` : `${stats?.serviceGrowth}%`} so với tháng trước
+                  Tổng số lịch đặt đã đăng ký
                 </p>
               </CardContent>
             </Card>
-            
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Chuyên viên
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalSpecialists || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.newSpecialists > 0 ? `+${stats?.newSpecialists}` : '0'} người mới
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Lịch đặt
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalBookings || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.bookingGrowth > 0 ? `+${stats?.bookingGrowth}%` : `${stats?.bookingGrowth}%`} so với tháng trước
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Doanh thu
                 </CardTitle>
@@ -194,128 +166,82 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats?.totalRevenue || 0)}
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {stats?.revenueGrowth > 0 ? `+${stats?.revenueGrowth}%` : `${stats?.revenueGrowth}%`} so với tháng trước
+                  Tổng doanh thu từ đầu năm
                 </p>
               </CardContent>
             </Card>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="col-span-1">
-              <CardHeader className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Lịch đặt gần đây</CardTitle>
-                  <CardDescription>
-                    Danh sách các lịch đặt mới nhất
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/admin/bookings">Xem tất cả</Link>
-                </Button>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Doanh thu gần đây</CardTitle>
+                <CardDescription>
+                  Doanh thu 6 tháng gần nhất
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                {recentBookings && recentBookings.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Khách hàng</TableHead>
-                        <TableHead>Dịch vụ</TableHead>
-                        <TableHead>Thời gian</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentBookings.map((booking: any) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.customerName}</TableCell>
-                          <TableCell>{booking.serviceName}</TableCell>
-                          <TableCell>
-                            {new Date(booking.bookingDate + 'T' + booking.bookingTime).toLocaleDateString('vi-VN')} {' '}
-                            {new Date(booking.bookingDate + 'T' + booking.bookingTime).toLocaleTimeString('vi-VN', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(booking.status)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground">Không có lịch đặt gần đây</p>
-                  </div>
-                )}
+              <CardContent className="pl-2">
+                <Chart 
+                  className="h-80" 
+                  type="bar"
+                  data={revenueData.length > 0 ? revenueData : fallbackRevenueData}
+                >
+                  <Bar dataKey="value" fill="#0ea5e9" />
+                </Chart>
               </CardContent>
             </Card>
-            
-            <Card className="col-span-1">
-              <CardHeader className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Dịch vụ phổ biến</CardTitle>
-                  <CardDescription>
-                    Dịch vụ được đặt nhiều nhất
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/admin/services">Quản lý dịch vụ</Link>
-                </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Lịch đặt gần đây</CardTitle>
+                <CardDescription>
+                  Số lượng lịch đặt 6 tháng gần nhất
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                {popularServices && popularServices.length > 0 ? (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tên dịch vụ</TableHead>
-                          <TableHead className="text-right">Số lượt đặt</TableHead>
-                          <TableHead className="text-right">Doanh thu</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {popularServices.map((service: any) => (
-                          <TableRow key={service.id}>
-                            <TableCell className="font-medium">{service.name}</TableCell>
-                            <TableCell className="text-right">{service.bookings}</TableCell>
-                            <TableCell className="text-right">
-                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.revenue)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    <div className="mt-4 space-y-2">
-                      {popularServices.map((service: any) => (
-                        <div key={service.id} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">{service.name}</p>
-                            <p className="text-sm font-medium">{Math.round((service.bookings / (stats?.totalBookings || 1)) * 100)}%</p>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="bg-primary h-full rounded-full" 
-                              style={{ width: `${Math.round((service.bookings / (stats?.totalBookings || 1)) * 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground">Không có dữ liệu dịch vụ phổ biến</p>
-                  </div>
-                )}
+              <CardContent className="pl-2">
+                <Chart 
+                  className="h-80" 
+                  type="bar"
+                  data={bookingsData.length > 0 ? bookingsData : fallbackBookingsData}
+                >
+                  <Bar dataKey="value" fill="#10b981" />
+                </Chart>
               </CardContent>
             </Card>
           </div>
-        </>
-      )}
+        </TabsContent>
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Phân tích người dùng</CardTitle>
+                <CardDescription>
+                  Số liệu về người dùng mới và quay lại
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500 text-center py-10">
+                  Tính năng đang được phát triển. Vui lòng quay lại sau.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Phân tích dịch vụ</CardTitle>
+                <CardDescription>
+                  Dịch vụ phổ biến nhất
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500 text-center py-10">
+                  Tính năng đang được phát triển. Vui lòng quay lại sau.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
