@@ -51,7 +51,7 @@ export const BookingsList = ({
         throw new Error("Không tìm thấy token đăng nhập");
       }
       
-      const response = await fetch(`http://localhost:8081/api/bookings/${id}/status`, {
+      const response = await fetch(`http://localhost:8081/api/admin/bookings/${id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -71,7 +71,7 @@ export const BookingsList = ({
       toast.success("Cập nhật trạng thái thành công");
     },
     onError: (error) => {
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi: ${(error as Error).message}`);
     }
   });
 
@@ -117,7 +117,7 @@ export const BookingsList = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {bookings.length > 0 ? (
+        {bookings && bookings.length > 0 ? (
           bookings.map((booking) => (
             <TableRow key={booking.id}>
               <TableCell className="font-medium">{booking.customer}</TableCell>
@@ -128,7 +128,7 @@ export const BookingsList = ({
               <TableCell>{booking.service}</TableCell>
               <TableCell>{booking.specialist}</TableCell>
               <TableCell>
-                {format(new Date(booking.date), "dd/MM/yyyy HH:mm")}
+                {booking.date && format(new Date(booking.date), "dd/MM/yyyy HH:mm")}
               </TableCell>
               <TableCell>{getStatusBadge(booking.status)}</TableCell>
               <TableCell className="text-right">

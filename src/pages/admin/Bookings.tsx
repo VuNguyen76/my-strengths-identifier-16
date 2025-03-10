@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -125,7 +125,7 @@ const AdminBookings = () => {
         onShowCancelledChange={handleShowCancelledChange}
       />
 
-      <TabsContent value={activeTab} className="mt-0">
+      <TabsContent value={activeTab} className="mt-0 data-[state=active]:block">
         <Card>
           <CardHeader>
             <CardTitle>Danh sách lịch đặt</CardTitle>

@@ -4,8 +4,6 @@ import { Link } from "react-router-dom";
 import { 
   Users, Calendar, 
   ChevronDown, FilePlus, 
-  ShieldCheck, BarChart, 
-  CreditCard, BookOpen,
   UserCheck
 } from "lucide-react";
 import { 
@@ -47,16 +45,6 @@ export const AdminNavLinks = ({ isActiveLink }: AdminNavLinksProps) => {
             }`}
           >
             <span>Danh sách người dùng</span>
-          </Link>
-          <Link 
-            to="/admin/roles" 
-            className={`pl-14 pr-6 py-2 flex items-center space-x-3 ${
-              isActiveLink("/admin/roles") 
-                ? "bg-primary/10 text-primary" 
-                : "hover:bg-muted"
-            }`}
-          >
-            <span>Phân quyền</span>
           </Link>
         </CollapsibleContent>
       </Collapsible>
@@ -112,48 +100,6 @@ export const AdminNavLinks = ({ isActiveLink }: AdminNavLinksProps) => {
           >
             <span>Danh sách chuyên viên</span>
           </Link>
-          <Link 
-            to="/admin/specialists/schedule" 
-            className={`pl-14 pr-6 py-2 flex items-center space-x-3 ${
-              isActiveLink("/admin/specialists/schedule") 
-                ? "bg-primary/10 text-primary" 
-                : "hover:bg-muted"
-            }`}
-          >
-            <span>Lịch làm việc</span>
-          </Link>
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Collapsible open={openCollapsible === 'blogs'} onOpenChange={() => toggleCollapsible('blogs')}>
-        <CollapsibleTrigger className="w-full px-6 py-3 flex items-center justify-between hover:bg-muted">
-          <div className="flex items-center space-x-3">
-            <BookOpen size={20} />
-            <span>Quản lý blog</span>
-          </div>
-          <ChevronDown size={16} className={`transition-transform duration-200 ${openCollapsible === 'blogs' ? 'rotate-180' : ''}`} />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <Link 
-            to="/admin/blogs" 
-            className={`pl-14 pr-6 py-2 flex items-center space-x-3 ${
-              isActiveLink("/admin/blogs") 
-                ? "bg-primary/10 text-primary" 
-                : "hover:bg-muted"
-            }`}
-          >
-            <span>Danh sách bài viết</span>
-          </Link>
-          <Link 
-            to="/admin/blogs/categories" 
-            className={`pl-14 pr-6 py-2 flex items-center space-x-3 ${
-              isActiveLink("/admin/blogs/categories") 
-                ? "bg-primary/10 text-primary" 
-                : "hover:bg-muted"
-            }`}
-          >
-            <span>Danh mục blog</span>
-          </Link>
         </CollapsibleContent>
       </Collapsible>
       
@@ -163,22 +109,6 @@ export const AdminNavLinks = ({ isActiveLink }: AdminNavLinksProps) => {
         isActive={isActiveLink("/admin/bookings")}
       >
         Lịch đặt
-      </SidebarNavLink>
-      
-      <SidebarNavLink 
-        to="/admin/reports" 
-        icon={<BarChart size={20} />}
-        isActive={isActiveLink("/admin/reports")}
-      >
-        Báo cáo & Thống kê
-      </SidebarNavLink>
-      
-      <SidebarNavLink 
-        to="/admin/transactions" 
-        icon={<CreditCard size={20} />}
-        isActive={isActiveLink("/admin/transactions")}
-      >
-        Giao dịch
       </SidebarNavLink>
     </>
   );
