@@ -1,6 +1,8 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface BookingData {
   customerName: string;
@@ -21,30 +23,11 @@ interface UseMutationOptions {
 export const useCreateBooking = (options?: UseMutationOptions) => {
   return useMutation({
     mutationFn: async (bookingData: BookingData) => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch('http://localhost:8081/api/admin/bookings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(bookingData)
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể tạo lịch đặt");
-      }
-      
-      return response.json();
+      return ApiService.post(ENDPOINTS.BOOKINGS.ADMIN, bookingData);
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {
-      toast.error(`Lỗi khi tạo lịch đặt: ${error.message}`);
+      toast.error(`Lỗi khi tạo lịch đặt: ${(error as Error).message}`);
       options?.onError?.(error as Error);
     }
   });
@@ -53,28 +36,11 @@ export const useCreateBooking = (options?: UseMutationOptions) => {
 export const useCancelBooking = (options?: UseMutationOptions) => {
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch(`http://localhost:8081/api/admin/bookings/${bookingId}/cancel`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể hủy lịch đặt");
-      }
-      
-      return response.json();
+      return ApiService.patch(ENDPOINTS.BOOKINGS.CANCEL(bookingId), {});
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {
-      toast.error(`Lỗi khi hủy lịch đặt: ${error.message}`);
+      toast.error(`Lỗi khi hủy lịch đặt: ${(error as Error).message}`);
       options?.onError?.(error as Error);
     }
   });
@@ -83,30 +49,11 @@ export const useCancelBooking = (options?: UseMutationOptions) => {
 export const useUpdateBookingStatus = (options?: UseMutationOptions) => {
   return useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: string, status: string }) => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch(`http://localhost:8081/api/admin/bookings/${bookingId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể cập nhật trạng thái đặt lịch");
-      }
-      
-      return response.json();
+      return ApiService.patch(ENDPOINTS.BOOKINGS.STATUS(bookingId), { status });
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {
-      toast.error(`Lỗi khi cập nhật trạng thái: ${error.message}`);
+      toast.error(`Lỗi khi cập nhật trạng thái: ${(error as Error).message}`);
       options?.onError?.(error as Error);
     }
   });

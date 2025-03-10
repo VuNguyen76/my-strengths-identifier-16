@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface Specialist {
   id: string;
@@ -20,17 +21,14 @@ const Specialists = () => {
 
   useEffect(() => {
     const fetchSpecialists = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('http://localhost:8081/api/specialists/featured');
-        if (!response.ok) {
-          throw new Error('Failed to fetch specialists');
-        }
-        const data = await response.json();
+        const data = await ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.FEATURED, { 
+          requiresAuth: false 
+        });
         setSpecialists(data);
       } catch (error) {
         console.error('Error fetching specialists:', error);
-        toast.error('Không thể tải thông tin chuyên viên. Vui lòng thử lại sau.');
-        // Use empty array if API fails
         setSpecialists([]);
       } finally {
         setLoading(false);

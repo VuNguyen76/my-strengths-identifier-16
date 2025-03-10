@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface BookingDetailsProps {
   booking: {
@@ -43,11 +45,7 @@ export const BookingDetails = ({
   const { data: services, isLoading: isLoadingServices } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/services');
-      if (!response.ok) {
-        throw new Error('Không thể tải dịch vụ');
-      }
-      return response.json();
+      return ApiService.get(ENDPOINTS.SERVICES.ALL);
     }
   });
 
@@ -55,11 +53,7 @@ export const BookingDetails = ({
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery({
     queryKey: ['specialists'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/specialists');
-      if (!response.ok) {
-        throw new Error('Không thể tải chuyên viên');
-      }
-      return response.json();
+      return ApiService.get(ENDPOINTS.SPECIALISTS.ALL);
     }
   });
 

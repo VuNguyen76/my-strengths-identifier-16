@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,8 @@ import { NewBookingDialog } from "@/components/admin/bookings/NewBookingDialog";
 import { BookingDetailsDialog } from "@/components/admin/bookings/BookingDetailsDialog";
 import { toast } from "sonner";
 import { BOOKING_STATUSES } from "@/components/booking/constants";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 const AdminBookings = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -21,23 +23,7 @@ const AdminBookings = () => {
   const { data: bookings, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['adminBookings'],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch('http://localhost:8081/api/admin/bookings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể tải danh sách đặt lịch");
-      }
-      
-      return response.json();
+      return ApiService.get(ENDPOINTS.BOOKINGS.ADMIN);
     }
   });
 
@@ -53,8 +39,14 @@ const AdminBookings = () => {
     setShowCancelled(value);
   };
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    // This is handled by the BookingsList component
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      await ApiService.patch(ENDPOINTS.BOOKINGS.STATUS(id), { status: newStatus });
+      toast.success(`Cập nhật trạng thái thành công`);
+      refetch();
+    } catch (error) {
+      toast.error(`Lỗi khi cập nhật trạng thái: ${(error as Error).message}`);
+    }
   };
 
   const viewBookingDetails = (id: string) => {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,9 @@ import { CustomerInfo } from "./CustomerInfo";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
+import AuthService from "@/services/auth.service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Service {
@@ -45,46 +49,31 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     }
   });
 
+  // Fetch services using API service
   const { data: services, isLoading: isLoadingServices, isError: isServicesError } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/services');
-      if (!response.ok) {
-        throw new Error('Không thể tải dịch vụ');
-      }
-      return response.json();
+      return ApiService.get<Service[]>(ENDPOINTS.SERVICES.ALL, { requiresAuth: false });
     }
   });
 
+  // Fetch specialists using API service
   const { data: specialists, isLoading: isLoadingSpecialists, isError: isSpecialistsError } = useQuery({
     queryKey: ['specialists'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/specialists');
-      if (!response.ok) {
-        throw new Error('Không thể tải chuyên viên');
-      }
-      return response.json();
+      return ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ALL, { requiresAuth: false });
     }
   });
 
   useEffect(() => {
-    const loadUserInfo = async () => {
-      const token = localStorage.getItem("token");
-      const user = localStorage.getItem("user");
-      
-      if (token && user) {
-        try {
-          const userData = JSON.parse(user);
-          form.setValue("name", userData.name || "");
-          form.setValue("phone", userData.phone || "");
-          form.setValue("email", userData.email || "");
-        } catch (error) {
-          console.error("Error parsing user data:", error);
-        }
-      }
-    };
+    // Load user information if logged in
+    const user = AuthService.getCurrentUser();
     
-    loadUserInfo();
+    if (user) {
+      form.setValue("name", user.fullName || "");
+      form.setValue("phone", user.phone || "");
+      form.setValue("email", user.email || "");
+    }
   }, [form]);
 
   useEffect(() => {
@@ -115,16 +104,9 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
   }, [form.watch, onFormUpdate, services, specialists]);
 
   const onSubmit = async (values: BookingFormValues) => {
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      toast.error("Vui lòng đăng nhập để đặt lịch");
-      return;
-    }
-    
     try {
       const bookingData = {
-        serviceId: values.services[0], // Hiện tại chỉ đặt 1 dịch vụ
+        serviceId: values.services[0], // Currently only booking 1 service
         specialistId: values.specialist,
         bookingDate: values.date.toISOString().split('T')[0],
         bookingTime: values.time,
@@ -133,18 +115,7 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
         customerEmail: values.email,
       };
       
-      const response = await fetch('http://localhost:8081/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookingData)
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể đặt lịch");
-      }
+      await ApiService.post(ENDPOINTS.BOOKINGS.USER, bookingData);
       
       toast.success("Đặt lịch thành công");
       onBookingComplete();

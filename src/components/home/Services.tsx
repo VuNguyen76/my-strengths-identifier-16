@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface Service {
   id: string;
   name: string;
   description: string;
   image: string;
+  price?: number;
 }
 
 const Services = () => {
@@ -18,17 +21,14 @@ const Services = () => {
 
   useEffect(() => {
     const fetchServices = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('http://localhost:8081/api/services/featured');
-        if (!response.ok) {
-          throw new Error('Failed to fetch services');
-        }
-        const data = await response.json();
+        const data = await ApiService.get<Service[]>(ENDPOINTS.SERVICES.FEATURED, { 
+          requiresAuth: false 
+        });
         setServices(data);
       } catch (error) {
         console.error('Error fetching services:', error);
-        toast.error('Không thể tải dịch vụ. Vui lòng thử lại sau.');
-        // Use empty array if API fails
         setServices([]);
       } finally {
         setLoading(false);

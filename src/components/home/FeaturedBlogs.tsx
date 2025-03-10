@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface Blog {
   id: string;
@@ -21,17 +22,14 @@ const FeaturedBlogs = () => {
 
   useEffect(() => {
     const fetchBlogs = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('http://localhost:8081/api/blogs/featured');
-        if (!response.ok) {
-          throw new Error('Failed to fetch blogs');
-        }
-        const data = await response.json();
+        const data = await ApiService.get<Blog[]>(ENDPOINTS.BLOGS.FEATURED, { 
+          requiresAuth: false 
+        });
         setBlogs(data);
       } catch (error) {
         console.error('Error fetching blogs:', error);
-        toast.error('Không thể tải bài viết. Vui lòng thử lại sau.');
-        // Use empty array if API fails
         setBlogs([]);
       } finally {
         setLoading(false);
