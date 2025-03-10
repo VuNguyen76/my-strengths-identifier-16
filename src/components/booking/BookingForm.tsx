@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -15,21 +16,7 @@ import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
 import AuthService from "@/services/auth.service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  description?: string;
-  duration?: string;
-}
-
-interface Specialist {
-  id: string;
-  name: string;
-  title?: string;
-  expertise?: string[];
-}
+import { Service, Specialist } from "@/types/service";
 
 interface BookingFormProps {
   onFormUpdate: (data: BookingData) => void;
@@ -84,14 +71,14 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
       
       const selectedServices = serviceIds
         .map(id => services && Array.isArray(services) ? 
-              services.find((s: Service) => s.id === id) : undefined)
+              services.find((s) => String(s.id) === id) : undefined)
         .filter(Boolean);
       
       const selectedSpecialist = specialists && Array.isArray(specialists) ? 
-        specialists.find((s: Specialist) => s.id === specialistId) : undefined;
+        specialists.find((s) => String(s.id) === specialistId) : undefined;
 
       const bookingData: BookingData = {
-        services: selectedServices as Array<{id: string, name: string, price: number}>,
+        services: selectedServices as Array<{id: string|number, name: string, price: number}>,
         specialist: selectedSpecialist,
         date: value.date,
         time: value.time,
@@ -173,9 +160,9 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {specialists && Array.isArray(specialists) ? 
-                    specialists.map((specialist: Specialist) => (
-                      <SelectItem key={specialist.id} value={specialist.id}>
+                  {specialists && Array.isArray(specialists) && specialists.length > 0 ? 
+                    specialists.map((specialist) => (
+                      <SelectItem key={specialist.id} value={String(specialist.id)}>
                         {specialist.name}
                       </SelectItem>
                     )) : 

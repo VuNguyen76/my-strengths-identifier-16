@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -44,19 +44,7 @@ import { toast } from "sonner";
 import ApiService from "@/services/api.service";
 import { ENDPOINTS } from "@/config/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface Specialist {
-  id: string;
-  name: string;
-  specialty: string;
-  email: string;
-  phone: string;
-  experience: string;
-  rating: number;
-  status: string;
-  image: string;
-  bio?: string;
-}
+import { Specialist } from "@/types/service";
 
 const AdminStaff = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +59,7 @@ const AdminStaff = () => {
     queryKey: ['specialists', 'admin'],
     queryFn: async () => {
       try {
-        return await ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ALL);
+        return await ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ADMIN);
       } catch (error) {
         console.error('Error fetching specialists:', error);
         toast.error('Không thể tải danh sách chuyên viên. Vui lòng thử lại sau.');
@@ -83,7 +71,7 @@ const AdminStaff = () => {
   // Mutation for adding a specialist
   const addSpecialistMutation = useMutation({
     mutationFn: async (specialistData: any) => {
-      return await ApiService.post(ENDPOINTS.SPECIALISTS.ALL, specialistData);
+      return await ApiService.post(ENDPOINTS.SPECIALISTS.ADMIN, specialistData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialists'] });
@@ -97,8 +85,8 @@ const AdminStaff = () => {
 
   // Mutation for updating a specialist
   const updateSpecialistMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string, data: any }) => {
-      return await ApiService.put(`${ENDPOINTS.SPECIALISTS.ALL}/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string | number, data: any }) => {
+      return await ApiService.put(`${ENDPOINTS.SPECIALISTS.ADMIN}/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialists'] });
@@ -113,8 +101,8 @@ const AdminStaff = () => {
 
   // Mutation for deleting a specialist
   const deleteSpecialistMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await ApiService.delete(`${ENDPOINTS.SPECIALISTS.ALL}/${id}`);
+    mutationFn: async (id: string | number) => {
+      return await ApiService.delete(`${ENDPOINTS.SPECIALISTS.ADMIN}/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialists'] });
@@ -132,10 +120,10 @@ const AdminStaff = () => {
   const filteredStaff = staff.filter((member) => {
     const query = searchQuery.toLowerCase();
     return (
-      member.name.toLowerCase().includes(query) ||
-      (member.specialty && member.specialty.toLowerCase().includes(query)) ||
-      member.email.toLowerCase().includes(query) ||
-      member.phone.includes(query)
+      member.name?.toLowerCase().includes(query) ||
+      (member.role && member.role.toLowerCase().includes(query)) ||
+      (member.email && member.email.toLowerCase().includes(query)) ||
+      (member.phone && member.phone.includes(query))
     );
   });
 
@@ -149,7 +137,7 @@ const AdminStaff = () => {
       
       const staffData = {
         name: formData.get("name"),
-        specialty: formData.get("specialty"),
+        role: formData.get("specialty"),
         email: formData.get("email"),
         phone: formData.get("phone"),
         experience: formData.get("experience"),
@@ -177,7 +165,7 @@ const AdminStaff = () => {
         
         const staffData = {
           name: formData.get("name"),
-          specialty: formData.get("specialty"),
+          role: formData.get("specialty"),
           email: formData.get("email"),
           phone: formData.get("phone"),
           experience: formData.get("experience"),
@@ -197,7 +185,7 @@ const AdminStaff = () => {
     }
   };
 
-  const handleDeleteStaff = async (staffId: string) => {
+  const handleDeleteStaff = async (staffId: string | number) => {
     try {
       await deleteSpecialistMutation.mutateAsync(staffId);
     } catch (error) {
@@ -210,8 +198,8 @@ const AdminStaff = () => {
     setIsEditStaffDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === 'active'
+  const getStatusBadge = (status?: string) => {
+    return status === 'active' || !status
       ? <Badge className="bg-green-500">Đang làm việc</Badge>
       : <Badge className="bg-gray-500">Nghỉ việc</Badge>;
   };
@@ -349,7 +337,7 @@ const AdminStaff = () => {
                           <span>{member.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{member.specialty}</TableCell>
+                      <TableCell>{member.role || 'Chuyên viên'}</TableCell>
                       <TableCell>{member.email}</TableCell>
                       <TableCell>{member.phone}</TableCell>
                       <TableCell>{member.experience}</TableCell>
@@ -426,7 +414,7 @@ const AdminStaff = () => {
                     <Input 
                       id="edit-specialty" 
                       name="specialty" 
-                      defaultValue={selectedStaff.specialty} 
+                      defaultValue={selectedStaff.role} 
                       required 
                     />
                   </div>
@@ -458,7 +446,7 @@ const AdminStaff = () => {
                     <Input 
                       id="edit-experience" 
                       name="experience" 
-                      defaultValue={selectedStaff.experience} 
+                      defaultValue={String(selectedStaff.experience)} 
                       required 
                     />
                   </div>

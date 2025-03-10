@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { 
   Users, Calendar, 
   ChevronDown, FilePlus, 
@@ -20,7 +20,20 @@ interface AdminNavLinksProps {
 }
 
 export const AdminNavLinks = ({ isActiveLink }: AdminNavLinksProps) => {
-  const [openCollapsible, setOpenCollapsible] = useState<string | null>(null);
+  const location = useLocation();
+  const [openCollapsible, setOpenCollapsible] = useState<string | null>(() => {
+    // Auto-open the correct section based on current path
+    if (location.pathname.includes('/admin/users') || location.pathname.includes('/admin/roles')) {
+      return 'users';
+    } else if (location.pathname.includes('/admin/services') || location.pathname.includes('/admin/categories')) {
+      return 'services';
+    } else if (location.pathname.includes('/admin/staff') || location.pathname.includes('/admin/specialists')) {
+      return 'specialists';
+    } else if (location.pathname.includes('/admin/blogs')) {
+      return 'blogs';
+    }
+    return null;
+  });
   
   // Toggle collapsible sections
   const toggleCollapsible = (section: string) => {
