@@ -22,12 +22,19 @@ import UserSettings from "./pages/user/Settings";
 import UserHistory from "./pages/user/History";
 import UserPayments from "./pages/user/Payments";
 import AdminUsers from "./pages/admin/Users";
+import AdminRoles from "./pages/admin/Roles";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminSettings from "./pages/admin/Settings";
+import AdminReports from "./pages/admin/Reports";
+import AdminTransactions from "./pages/admin/Transactions";
 import AdminStaff from "./pages/admin/Staff";
 import ServicesAdmin from "./pages/admin/Services";
 import ServiceCategories from "./pages/admin/ServiceCategories";
+import Schedule from "./pages/admin/Schedule";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
+import AdminBlogs from "./pages/admin/Blogs";
+import BlogCategories from "./pages/admin/BlogCategories";
 
 const queryClient = new QueryClient();
 
@@ -62,10 +69,17 @@ const App = () => (
           <Route path="/admin" element={<DashboardLayout requiredRole="admin" />}>
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="roles" element={<AdminRoles />} />
             <Route path="services" element={<ServicesAdmin />} />
             <Route path="categories" element={<ServiceCategories />} />
+            <Route path="specialists/schedule" element={<Schedule />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="staff" element={<AdminStaff />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="transactions" element={<AdminTransactions />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="blogs" element={<AdminBlogs />} />
+            <Route path="blogs/categories" element={<BlogCategories />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
