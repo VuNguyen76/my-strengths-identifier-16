@@ -2,16 +2,24 @@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { BookingFormValues } from "./schema";
-import { SERVICES } from "./constants";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
-interface ServiceMultiSelectProps {
-  form: UseFormReturn<BookingFormValues>;
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  duration?: string;
 }
 
-export const ServiceMultiSelect = ({ form }: ServiceMultiSelectProps) => {
+interface ServiceMultiSelectProps {
+  form: UseFormReturn<BookingFormValues>;
+  services: Service[];
+}
+
+export const ServiceMultiSelect = ({ form, services }: ServiceMultiSelectProps) => {
   const selectedServices = form.watch("services") || [];
 
   const handleServiceToggle = (serviceId: string) => {
@@ -41,7 +49,7 @@ export const ServiceMultiSelect = ({ form }: ServiceMultiSelectProps) => {
           <FormControl>
             <Card>
               <CardContent className="p-4 grid gap-4">
-                {SERVICES.map((service) => (
+                {services.map((service) => (
                   <div key={service.id} className="flex items-start space-x-3 p-3 rounded hover:bg-muted/40">
                     <Checkbox
                       checked={selectedServices.includes(service.id)}

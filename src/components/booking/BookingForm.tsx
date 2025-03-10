@@ -10,7 +10,24 @@ import { ServiceMultiSelect } from "./ServiceMultiSelect";
 import { SpecialistSelect } from "./SpecialistSelect";
 import { DateTimeSelect } from "./DateTimeSelect";
 import { CustomerInfo } from "./CustomerInfo";
-import { SERVICES, SPECIALISTS } from "./constants";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  duration?: string;
+}
+
+interface Specialist {
+  id: string;
+  name: string;
+  title?: string;
+  expertise?: string[];
+}
 
 interface BookingFormProps {
   onFormUpdate: (data: BookingData) => void;
@@ -28,18 +45,65 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     }
   });
 
+  // Fetch services
+  const { data: services, isLoading: isLoadingServices, isError: isServicesError } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:8081/api/services');
+      if (!response.ok) {
+        throw new Error('Không thể tải dịch vụ');
+      }
+      return response.json();
+    }
+  });
+
+  // Fetch specialists
+  const { data: specialists, isLoading: isLoadingSpecialists, isError: isSpecialistsError } = useQuery({
+    queryKey: ['specialists'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:8081/api/specialists');
+      if (!response.ok) {
+        throw new Error('Không thể tải chuyên viên');
+      }
+      return response.json();
+    }
+  });
+
+  useEffect(() => {
+    // Prefill customer info if user is logged in
+    const loadUserInfo = async () => {
+      const token = localStorage.getItem("token");
+      const user = localStorage.getItem("user");
+      
+      if (token && user) {
+        try {
+          const userData = JSON.parse(user);
+          form.setValue("name", userData.name || "");
+          form.setValue("phone", userData.phone || "");
+          form.setValue("email", userData.email || "");
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    };
+    
+    loadUserInfo();
+  }, [form]);
+
   useEffect(() => {
     const subscription = form.watch((value) => {
       const serviceIds = value.services || [];
       const specialistId = value.specialist;
-
-      const selectedServices = serviceIds.map(id => 
-        SERVICES.find(s => s.id === id)
-      ).filter(Boolean);
+      
+      const selectedServices = serviceIds
+        .map(id => services?.find((s: Service) => s.id === id))
+        .filter(Boolean);
+      
+      const selectedSpecialist = specialists?.find((s: Specialist) => s.id === specialistId);
 
       const bookingData: BookingData = {
         services: selectedServices as Array<{id: string, name: string, price: number}>,
-        specialist: specialistId ? SPECIALISTS.find(s => s.id === specialistId) : undefined,
+        specialist: selectedSpecialist,
         date: value.date,
         time: value.time,
         customerName: value.name,
@@ -51,18 +115,73 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [form.watch, onFormUpdate]);
+  }, [form.watch, onFormUpdate, services, specialists]);
 
-  const onSubmit = (values: BookingFormValues) => {
-    console.log(values);
-    onBookingComplete();
+  const onSubmit = async (values: BookingFormValues) => {
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để đặt lịch");
+      return;
+    }
+    
+    try {
+      const bookingData = {
+        serviceId: values.services[0], // Hiện tại chỉ đặt 1 dịch vụ
+        specialistId: values.specialist,
+        bookingDate: values.date.toISOString().split('T')[0],
+        bookingTime: values.time,
+        customerName: values.name,
+        customerPhone: values.phone,
+        customerEmail: values.email,
+      };
+      
+      const response = await fetch('http://localhost:8081/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookingData)
+      });
+      
+      if (!response.ok) {
+        throw new Error("Không thể đặt lịch");
+      }
+      
+      toast.success("Đặt lịch thành công");
+      onBookingComplete();
+    } catch (error) {
+      toast.error(`Lỗi khi đặt lịch: ${(error as Error).message}`);
+    }
   };
+
+  if (isLoadingServices || isLoadingSpecialists) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isServicesError || isSpecialistsError) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-red-500 mb-4">
+          Không thể tải dữ liệu. Vui lòng thử lại sau.
+        </div>
+        <Button onClick={() => window.location.reload()}>
+          Tải lại
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ServiceMultiSelect form={form} />
-        <SpecialistSelect form={form} />
+        <ServiceMultiSelect form={form} services={services || []} />
+        <SpecialistSelect form={form} specialists={specialists || []} />
         <DateTimeSelect form={form} />
         <CustomerInfo form={form} />
         <Button type="submit" className="w-full">
