@@ -1,6 +1,7 @@
+
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, Settings } from "lucide-react";
 import SidebarNavLink from "./SidebarNavLink";
 import { AdminNavLinks } from "./navLinks/AdminNavLinks";
 import { UserNavLinks } from "./navLinks/UserNavLinks";

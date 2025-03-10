@@ -1,3 +1,4 @@
+
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn, useWatch } from "react-hook-form";
@@ -42,7 +43,7 @@ export const SpecialistSelect = ({ form }: SpecialistSelectProps) => {
   return (
     <FormField
       control={form.control}
-      name="specialistId"
+      name="specialist"
       render={({ field }) => (
         <FormItem>
           <FormLabel>Chuyên viên</FormLabel>

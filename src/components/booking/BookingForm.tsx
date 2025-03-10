@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +12,7 @@ import { CustomerInfo } from "./CustomerInfo";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Select, SelectContent, SelectItem } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Service {
   id: string;
@@ -46,7 +45,6 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     }
   });
 
-  // Fetch services
   const { data: services, isLoading: isLoadingServices, isError: isServicesError } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
@@ -58,7 +56,6 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     }
   });
 
-  // Fetch specialists
   const { data: specialists, isLoading: isLoadingSpecialists, isError: isSpecialistsError } = useQuery({
     queryKey: ['specialists'],
     queryFn: async () => {
@@ -71,7 +68,6 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
   });
 
   useEffect(() => {
-    // Prefill customer info if user is logged in
     const loadUserInfo = async () => {
       const token = localStorage.getItem("token");
       const user = localStorage.getItem("user");
