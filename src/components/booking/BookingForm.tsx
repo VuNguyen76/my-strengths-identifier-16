@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BookingData } from "@/pages/Booking";
 import { bookingFormSchema, type BookingFormValues } from "./schema";
 import { ServiceMultiSelect } from "./ServiceMultiSelect";
-import { SpecialistSelect } from "./SpecialistSelect";
 import { DateTimeSelect } from "./DateTimeSelect";
 import { CustomerInfo } from "./CustomerInfo";
 import { Loader2 } from "lucide-react";
@@ -71,6 +70,7 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     
     if (user) {
       form.setValue("name", user.fullName || "");
+      // Check if user has phone property before accessing it
       form.setValue("phone", user.phone || "");
       form.setValue("email", user.email || "");
     }
@@ -82,10 +82,12 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
       const specialistId = value.specialist;
       
       const selectedServices = serviceIds
-        .map(id => services?.find((s: Service) => s.id === id))
+        .map(id => services && Array.isArray(services) ? 
+              services.find((s: Service) => s.id === id) : undefined)
         .filter(Boolean);
       
-      const selectedSpecialist = specialists?.find((s: Specialist) => s.id === specialistId);
+      const selectedSpecialist = specialists && Array.isArray(specialists) ? 
+        specialists.find((s: Specialist) => s.id === specialistId) : undefined;
 
       const bookingData: BookingData = {
         services: selectedServices as Array<{id: string, name: string, price: number}>,
@@ -148,7 +150,10 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ServiceMultiSelect form={form} services={services || []} />
+        <ServiceMultiSelect 
+          form={form} 
+          services={Array.isArray(services) ? services : []} 
+        />
         
         <FormField
           control={form.control}
@@ -167,11 +172,14 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {specialists && specialists.map((specialist: any) => (
-                    <SelectItem key={specialist.id} value={specialist.id}>
-                      {specialist.name}
-                    </SelectItem>
-                  ))}
+                  {specialists && Array.isArray(specialists) ? 
+                    specialists.map((specialist: Specialist) => (
+                      <SelectItem key={specialist.id} value={specialist.id}>
+                        {specialist.name}
+                      </SelectItem>
+                    )) : 
+                    <SelectItem value="no-specialists">Không có chuyên viên</SelectItem>
+                  }
                 </SelectContent>
               </Select>
               <FormMessage />

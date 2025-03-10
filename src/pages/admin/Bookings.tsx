@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { BookingsFilter } from "@/components/admin/bookings/BookingsFilter";
 import { BookingsList } from "@/components/admin/bookings/BookingsList";
@@ -12,18 +12,30 @@ import { BOOKING_STATUSES } from "@/components/booking/constants";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
 
+interface Booking {
+  id: string;
+  customer: string;
+  email: string;
+  phone: string;
+  service: string;
+  specialist: string;
+  date: string;
+  status: string;
+  [key: string]: any;
+}
+
 const AdminBookings = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showCancelled, setShowCancelled] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   // Fetch bookings from API
   const { data: bookings, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['adminBookings'],
     queryFn: async () => {
-      return ApiService.get(ENDPOINTS.BOOKINGS.ADMIN);
+      return ApiService.get<Booking[]>(ENDPOINTS.BOOKINGS.ADMIN);
     }
   });
 
@@ -50,7 +62,12 @@ const AdminBookings = () => {
   };
 
   const viewBookingDetails = (id: string) => {
-    const booking = bookings?.find((b: any) => b.id === id);
+    if (!bookings || !Array.isArray(bookings)) {
+      toast.error("Không thể xem chi tiết: Dữ liệu không có sẵn");
+      return;
+    }
+    
+    const booking = bookings.find((b: Booking) => b.id === id);
     if (booking) {
       setSelectedBooking(booking);
       setIsViewDialogOpen(true);
@@ -63,27 +80,29 @@ const AdminBookings = () => {
   };
 
   // Filter bookings based on search, tab, and showCancelled
-  const filteredBookings = bookings ? bookings.filter((booking: any) => {
-    // Filter by search term
-    const matchesSearch =
-      booking.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.service?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredBookings = bookings && Array.isArray(bookings) 
+    ? bookings.filter((booking: Booking) => {
+        // Filter by search term
+        const matchesSearch =
+          booking.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.service?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Filter by tab
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === BOOKING_STATUSES.PENDING && booking.status === BOOKING_STATUSES.PENDING) ||
-      (activeTab === BOOKING_STATUSES.CONFIRMED && booking.status === BOOKING_STATUSES.CONFIRMED) ||
-      (activeTab === BOOKING_STATUSES.COMPLETED && booking.status === BOOKING_STATUSES.COMPLETED) ||
-      (activeTab === BOOKING_STATUSES.CANCELLED && booking.status === BOOKING_STATUSES.CANCELLED);
+        // Filter by tab
+        const matchesTab =
+          activeTab === "all" ||
+          (activeTab === BOOKING_STATUSES.PENDING && booking.status === BOOKING_STATUSES.PENDING) ||
+          (activeTab === BOOKING_STATUSES.CONFIRMED && booking.status === BOOKING_STATUSES.CONFIRMED) ||
+          (activeTab === BOOKING_STATUSES.COMPLETED && booking.status === BOOKING_STATUSES.COMPLETED) ||
+          (activeTab === BOOKING_STATUSES.CANCELLED && booking.status === BOOKING_STATUSES.CANCELLED);
 
-    // Filter by cancelled switch
-    const matchesCancelled = showCancelled || booking.status !== BOOKING_STATUSES.CANCELLED;
+        // Filter by cancelled switch
+        const matchesCancelled = showCancelled || booking.status !== BOOKING_STATUSES.CANCELLED;
 
-    return matchesSearch && matchesTab && matchesCancelled;
-  }) : [];
+        return matchesSearch && matchesTab && matchesCancelled;
+      }) 
+    : [];
 
   if (isError) {
     return (
@@ -117,21 +136,23 @@ const AdminBookings = () => {
         onShowCancelledChange={handleShowCancelledChange}
       />
 
-      <TabsContent value={activeTab} className="mt-0">
-        <Card>
-          <CardHeader>
-            <CardTitle>Danh sách lịch đặt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BookingsList
-              bookings={filteredBookings}
-              isLoading={isLoading}
-              viewBookingDetails={viewBookingDetails}
-              onStatusChange={handleStatusChange}
-            />
-          </CardContent>
-        </Card>
-      </TabsContent>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsContent value={activeTab} className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Danh sách lịch đặt</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BookingsList
+                bookings={filteredBookings}
+                isLoading={isLoading}
+                viewBookingDetails={viewBookingDetails}
+                onStatusChange={handleStatusChange}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <BookingDetailsDialog
         booking={selectedBooking}

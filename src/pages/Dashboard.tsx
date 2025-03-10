@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import AuthService from "@/services/auth.service";
+import ApiService from "@/services/api.service";
+import { ENDPOINTS } from "@/config/api";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ const Dashboard = () => {
         const token = AuthService.getToken();
         
         if (!token) {
+          console.log("No token found, redirecting to login");
           toast.error("Bạn cần đăng nhập để truy cập trang này");
           navigate("/login");
           return;
@@ -22,25 +25,31 @@ const Dashboard = () => {
         
         // Check if token is expired
         if (AuthService.isTokenExpired(token)) {
+          console.log("Token expired, attempting to refresh");
           // Try to refresh the token
           const newToken = await AuthService.refreshToken();
           if (!newToken) {
+            console.log("Token refresh failed, redirecting to login");
             toast.error("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại");
             navigate("/login");
             return;
           }
+          console.log("Token refreshed successfully");
         }
         
         // Fetch user data from API
-        const userData = await AuthService.getUserProfile();
+        console.log("Fetching user profile");
+        const userData = await ApiService.get(ENDPOINTS.AUTH.ME);
         
         if (!userData) {
+          console.log("No user data returned, logging out");
           toast.error("Không thể xác thực tài khoản");
           AuthService.logout();
           navigate("/login");
           return;
         }
         
+        console.log("User data retrieved, redirecting based on role");
         // Redirect based on role
         if (userData.role === "ROLE_ADMIN") {
           navigate("/admin");

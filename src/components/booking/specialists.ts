@@ -1,7 +1,6 @@
 
-// Temporary mock data until API specialists are available
+// This file is kept as a backup in case API fails
+// In production, this should be removed and use API data only
 export const SPECIALISTS = [
-  { id: "1", name: "Nguyễn Thị Hương", speciality: "Chăm sóc da" },
-  { id: "2", name: "Trần Văn Minh", speciality: "Massage trị liệu" },
-  { id: "3", name: "Lê Thị Lan", speciality: "Điều trị mụn" },
+  // Empty array - we'll use API data now
 ];

@@ -15,6 +15,8 @@ import { AlertCircle, CheckCircle, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { BOOKING_STATUSES } from "@/components/booking/constants";
+import { ENDPOINTS } from "@/config/api";
+import ApiService from "@/services/api.service";
 
 interface Booking {
   id: string;
@@ -45,33 +47,14 @@ export const BookingsList = ({
   // Mutation for changing booking status
   const statusChangeMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch(`http://localhost:8081/api/bookings/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể cập nhật trạng thái");
-      }
-      
-      return response.json();
+      return ApiService.patch(ENDPOINTS.BOOKINGS.STATUS(id), { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminBookings'] });
       toast.success("Cập nhật trạng thái thành công");
     },
     onError: (error) => {
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi: ${(error as Error).message}`);
     }
   });
 
@@ -117,7 +100,7 @@ export const BookingsList = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {bookings.length > 0 ? (
+        {bookings && bookings.length > 0 ? (
           bookings.map((booking) => (
             <TableRow key={booking.id}>
               <TableCell className="font-medium">{booking.customer}</TableCell>

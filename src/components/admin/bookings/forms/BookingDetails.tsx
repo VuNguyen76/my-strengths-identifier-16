@@ -3,7 +3,7 @@ import { format, startOfToday } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,6 +20,21 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  duration?: string;
+}
+
+interface Specialist {
+  id: string;
+  name: string;
+  title?: string;
+  expertise?: string[];
+}
 
 interface BookingDetailsProps {
   booking: {
@@ -45,7 +60,7 @@ export const BookingDetails = ({
   const { data: services, isLoading: isLoadingServices } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
-      return ApiService.get(ENDPOINTS.SERVICES.ALL);
+      return ApiService.get<Service[]>(ENDPOINTS.SERVICES.ALL);
     }
   });
 
@@ -53,7 +68,7 @@ export const BookingDetails = ({
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery({
     queryKey: ['specialists'],
     queryFn: async () => {
-      return ApiService.get(ENDPOINTS.SPECIALISTS.ALL);
+      return ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ALL);
     }
   });
 
@@ -70,11 +85,19 @@ export const BookingDetails = ({
               <SelectValue placeholder="Chọn dịch vụ" />
             </SelectTrigger>
             <SelectContent>
-              {services && services.map((service: any) => (
-                <SelectItem key={service.id} value={service.id.toString()}>
-                  {service.name}
-                </SelectItem>
-              ))}
+              {isLoadingServices ? (
+                <div className="flex justify-center p-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : services && Array.isArray(services) ? (
+                services.map((service: Service) => (
+                  <SelectItem key={service.id} value={service.id.toString()}>
+                    {service.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-services">Không có dịch vụ</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -89,11 +112,19 @@ export const BookingDetails = ({
               <SelectValue placeholder="Chọn chuyên viên" />
             </SelectTrigger>
             <SelectContent>
-              {specialists && specialists.map((specialist: any) => (
-                <SelectItem key={specialist.id} value={specialist.id.toString()}>
-                  {specialist.name}
-                </SelectItem>
-              ))}
+              {isLoadingSpecialists ? (
+                <div className="flex justify-center p-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : specialists && Array.isArray(specialists) ? (
+                specialists.map((specialist: Specialist) => (
+                  <SelectItem key={specialist.id} value={specialist.id.toString()}>
+                    {specialist.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-specialists">Không có chuyên viên</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
