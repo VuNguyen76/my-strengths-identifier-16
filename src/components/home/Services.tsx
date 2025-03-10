@@ -6,14 +6,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  price?: number;
-}
+import { Service } from "@/types/service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Services = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -26,7 +20,8 @@ const Services = () => {
         const data = await ApiService.get<Service[]>(ENDPOINTS.SERVICES.FEATURED, { 
           requiresAuth: false 
         });
-        setServices(data);
+        console.log("Services data:", data);
+        setServices(data || []);
       } catch (error) {
         console.error('Error fetching services:', error);
         setServices([]);
@@ -48,14 +43,16 @@ const Services = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((placeholder) => (
-              <Card key={placeholder} className="animate-pulse">
-                <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+              <Card key={placeholder}>
+                <div className="aspect-video rounded-t-lg overflow-hidden">
+                  <Skeleton className="w-full h-full" />
+                </div>
                 <CardHeader>
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full mt-2"></div>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full" />
                 </CardHeader>
                 <CardContent>
-                  <div className="h-10 bg-gray-200 rounded"></div>
+                  <Skeleton className="h-10 w-full" />
                 </CardContent>
               </Card>
             ))}

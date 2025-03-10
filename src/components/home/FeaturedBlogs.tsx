@@ -6,6 +6,7 @@ import { Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Blog {
   id: string;
@@ -27,7 +28,8 @@ const FeaturedBlogs = () => {
         const data = await ApiService.get<Blog[]>(ENDPOINTS.BLOGS.FEATURED, { 
           requiresAuth: false 
         });
-        setBlogs(data);
+        console.log("Blogs data:", data);
+        setBlogs(data || []);
       } catch (error) {
         console.error('Error fetching blogs:', error);
         setBlogs([]);
@@ -51,16 +53,18 @@ const FeaturedBlogs = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((placeholder) => (
-              <Card key={placeholder} className="animate-pulse">
-                <div className="aspect-video bg-gray-200"></div>
+              <Card key={placeholder}>
+                <div className="aspect-video">
+                  <Skeleton className="w-full h-full" />
+                </div>
                 <CardHeader className="pb-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <Skeleton className="h-6 w-3/4" />
                 </CardHeader>
                 <CardContent>
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-3/4 mb-4" />
+                  <Skeleton className="h-10 w-full" />
                 </CardContent>
               </Card>
             ))}

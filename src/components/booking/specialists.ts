@@ -1,4 +1,2 @@
-
-// This file is kept as a backup in case API fails
-// In production, this should be removed and use API data only
+// This file is kept as a reference but specialists data should be loaded from API
 export const SPECIALISTS = [];

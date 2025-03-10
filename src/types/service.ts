@@ -1,18 +1,18 @@
 
 export interface Service {
-  id: number | string;
+  id: string;
   name: string;
   description: string;
   price: number;
   image?: string;
   duration?: number; // Duration in minutes
-  categoryId?: number | string;
+  categoryId?: string;
   categoryName?: string;
   active?: boolean;
 }
 
 export interface ServiceCategory {
-  id: number | string;
+  id: string;
   name: string;
   description: string;
   image?: string;
@@ -21,7 +21,7 @@ export interface ServiceCategory {
 
 // Specialist type
 export interface Specialist {
-  id: number | string;
+  id: string;
   name: string;
   role?: string;
   experience?: number | string;
@@ -32,18 +32,19 @@ export interface Specialist {
   rating?: number;
   email?: string;
   phone?: string;
-  userId?: number | string;
+  userId?: string;
+  status?: string;
 }
 
 // Booking type
 export interface Booking {
-  id: string | number;
+  id: string;
   service: string | Service;
   specialist: string | Specialist;
   date: string;
   status: string;
   price: number;
-  customerId?: string | number;
+  customerId?: string;
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
@@ -53,18 +54,18 @@ export interface Booking {
 
 // Transaction type
 export interface Transaction {
-  id: string | number;
+  id: string;
   date: string;
   service: string | Service;
   amount: number;
   status: string;
   paymentMethod: string;
-  bookingId?: string | number;
+  bookingId?: string;
 }
 
 // Payment Method type
 export interface PaymentMethod {
-  id: string | number;
+  id: string;
   type: string;
   name: string;
   expiry?: string;
@@ -73,10 +74,10 @@ export interface PaymentMethod {
 
 // Invoice type
 export interface Invoice {
-  id: string | number;
+  id: string;
   date: string;
   service: string | Service;
   amount: number;
   status: string;
-  transactionId: string | number;
+  transactionId: string;
 }

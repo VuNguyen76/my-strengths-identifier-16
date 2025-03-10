@@ -6,14 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
-
-interface Specialist {
-  id: string;
-  name: string;
-  role: string;
-  experience: string;
-  image: string;
-}
+import { Specialist } from "@/types/service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Specialists = () => {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
@@ -26,7 +20,8 @@ const Specialists = () => {
         const data = await ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.FEATURED, { 
           requiresAuth: false 
         });
-        setSpecialists(data);
+        console.log("Specialists data:", data);
+        setSpecialists(data || []);
       } catch (error) {
         console.error('Error fetching specialists:', error);
         setSpecialists([]);
@@ -50,15 +45,17 @@ const Specialists = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((placeholder) => (
-              <Card key={placeholder} className="text-center animate-pulse">
-                <div className="h-72 bg-gray-200 rounded-t-lg"></div>
+              <Card key={placeholder} className="text-center">
+                <div className="h-72 rounded-t-lg overflow-hidden">
+                  <Skeleton className="w-full h-full" />
+                </div>
                 <CardHeader className="pt-6">
-                  <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  <Skeleton className="h-6 w-1/2 mx-auto" />
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                  <div className="h-10 bg-gray-200 rounded w-full mx-auto mt-2"></div>
+                  <Skeleton className="h-4 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                  <Skeleton className="h-10 w-full mx-auto mt-2" />
                 </CardContent>
               </Card>
             ))}

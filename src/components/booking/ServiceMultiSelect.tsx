@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
 interface Service {
-  id: string | number;
+  id: string;
   name: string;
   price: number;
   description?: string;
@@ -53,8 +53,8 @@ export const ServiceMultiSelect = ({ form, services }: ServiceMultiSelectProps) 
                   services.map((service) => (
                     <div key={service.id} className="flex items-start space-x-3 p-3 rounded hover:bg-muted/40">
                       <Checkbox
-                        checked={selectedServices.includes(String(service.id))}
-                        onCheckedChange={() => handleServiceToggle(String(service.id))}
+                        checked={selectedServices.includes(service.id)}
+                        onCheckedChange={() => handleServiceToggle(service.id)}
                         id={`service-${service.id}`}
                         className="mt-1"
                       />
