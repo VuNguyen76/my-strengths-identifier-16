@@ -41,6 +41,9 @@ import {
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import ApiService from "@/services/api.service";
+import { ENDPOINTS } from "@/config/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Specialist {
   id: string;
@@ -56,46 +59,71 @@ interface Specialist {
 }
 
 const AdminStaff = () => {
-  const [staff, setStaff] = useState<Specialist[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Specialist | null>(null);
-  const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
-
-  const fetchStaff = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Bạn cần đăng nhập lại");
-        return;
+  // Query to fetch specialists
+  const { data: staff = [], isLoading } = useQuery({
+    queryKey: ['specialists', 'admin'],
+    queryFn: async () => {
+      try {
+        return await ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ALL);
+      } catch (error) {
+        console.error('Error fetching specialists:', error);
+        toast.error('Không thể tải danh sách chuyên viên. Vui lòng thử lại sau.');
+        return [];
       }
-
-      const response = await fetch('http://localhost:8081/api/admin/specialists', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch specialists');
-      }
-      
-      const data = await response.json();
-      setStaff(data);
-    } catch (error) {
-      console.error('Error fetching specialists:', error);
-      toast.error('Không thể tải danh sách chuyên viên. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
+
+  // Mutation for adding a specialist
+  const addSpecialistMutation = useMutation({
+    mutationFn: async (specialistData: any) => {
+      return await ApiService.post(ENDPOINTS.SPECIALISTS.ALL, specialistData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialists'] });
+      toast.success("Đã thêm chuyên viên mới thành công");
+      setIsAddStaffDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Không thể thêm chuyên viên. Vui lòng thử lại sau.');
+    }
+  });
+
+  // Mutation for updating a specialist
+  const updateSpecialistMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      return await ApiService.put(`${ENDPOINTS.SPECIALISTS.ALL}/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialists'] });
+      toast.success("Đã cập nhật thông tin chuyên viên thành công");
+      setIsEditStaffDialogOpen(false);
+      setSelectedStaff(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Không thể cập nhật chuyên viên. Vui lòng thử lại sau.');
+    }
+  });
+
+  // Mutation for deleting a specialist
+  const deleteSpecialistMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await ApiService.delete(`${ENDPOINTS.SPECIALISTS.ALL}/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialists'] });
+      toast.success("Đã xóa chuyên viên thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Không thể xóa chuyên viên. Vui lòng thử lại sau.');
+    }
+  });
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -105,7 +133,7 @@ const AdminStaff = () => {
     const query = searchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
-      member.specialty.toLowerCase().includes(query) ||
+      (member.specialty && member.specialty.toLowerCase().includes(query)) ||
       member.email.toLowerCase().includes(query) ||
       member.phone.includes(query)
     );
@@ -129,34 +157,10 @@ const AdminStaff = () => {
         bio: formData.get("bio")
       };
       
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Bạn cần đăng nhập lại");
-        return;
-      }
-
-      const response = await fetch('http://localhost:8081/api/admin/specialists', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(staffData)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add specialist');
-      }
-      
-      const newSpecialist = await response.json();
-      setStaff([...staff, newSpecialist]);
-      toast.success("Đã thêm chuyên viên mới thành công");
-      setIsAddStaffDialogOpen(false);
+      await addSpecialistMutation.mutateAsync(staffData);
       form.reset();
     } catch (error) {
       console.error('Error adding specialist:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể thêm chuyên viên. Vui lòng thử lại sau.');
     } finally {
       setFormLoading(false);
     }
@@ -181,38 +185,12 @@ const AdminStaff = () => {
           bio: formData.get("bio")
         };
         
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Bạn cần đăng nhập lại");
-          return;
-        }
-
-        const response = await fetch(`http://localhost:8081/api/admin/specialists/${selectedStaff.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(staffData)
+        await updateSpecialistMutation.mutateAsync({
+          id: selectedStaff.id,
+          data: staffData
         });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update specialist');
-        }
-        
-        const updatedSpecialist = await response.json();
-        
-        setStaff(staff.map(member => 
-          member.id === selectedStaff.id ? updatedSpecialist : member
-        ));
-        
-        toast.success(`Đã cập nhật thông tin chuyên viên ${selectedStaff.name} thành công`);
-        setIsEditStaffDialogOpen(false);
-        setSelectedStaff(null);
       } catch (error) {
         console.error('Error updating specialist:', error);
-        toast.error(error instanceof Error ? error.message : 'Không thể cập nhật chuyên viên. Vui lòng thử lại sau.');
       } finally {
         setFormLoading(false);
       }
@@ -221,29 +199,9 @@ const AdminStaff = () => {
 
   const handleDeleteStaff = async (staffId: string) => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Bạn cần đăng nhập lại");
-        return;
-      }
-
-      const response = await fetch(`http://localhost:8081/api/admin/specialists/${staffId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete specialist');
-      }
-      
-      setStaff(staff.filter(member => member.id !== staffId));
-      toast.success("Đã xóa chuyên viên thành công");
+      await deleteSpecialistMutation.mutateAsync(staffId);
     } catch (error) {
       console.error('Error deleting specialist:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể xóa chuyên viên. Vui lòng thử lại sau.');
     }
   };
 
@@ -258,7 +216,7 @@ const AdminStaff = () => {
       : <Badge className="bg-gray-500">Nghỉ việc</Badge>;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -327,8 +285,8 @@ const AdminStaff = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
+                <Button type="submit" disabled={formLoading || addSpecialistMutation.isPending}>
+                  {(formLoading || addSpecialistMutation.isPending) ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Đang xử lý...
@@ -525,8 +483,8 @@ const AdminStaff = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
+                <Button type="submit" disabled={formLoading || updateSpecialistMutation.isPending}>
+                  {(formLoading || updateSpecialistMutation.isPending) ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Đang xử lý...

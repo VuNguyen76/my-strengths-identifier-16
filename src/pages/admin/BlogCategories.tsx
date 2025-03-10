@@ -3,8 +3,11 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ApiService from "@/services/api.service";
+import { ENDPOINTS } from "@/config/api";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,61 +63,41 @@ const categoryFormSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-// Example categories
-const initialCategories = [
-  {
-    id: "1",
-    name: "Làm đẹp",
-    slug: "lam-dep",
-    description: "Các bài viết về làm đẹp và chăm sóc da",
-    isActive: true,
-    postsCount: 5
-  },
-  {
-    id: "2",
-    name: "Sức khỏe",
-    slug: "suc-khoe",
-    description: "Các bài viết về sức khỏe và lối sống",
-    isActive: true,
-    postsCount: 3
-  },
-  {
-    id: "3",
-    name: "Trị liệu",
-    slug: "tri-lieu",
-    description: "Các bài viết về trị liệu và điều trị",
-    isActive: true,
-    postsCount: 2
-  },
-  {
-    id: "4",
-    name: "Tin tức",
-    slug: "tin-tuc",
-    description: "Các tin tức về ngành làm đẹp",
-    isActive: true,
-    postsCount: 7
-  },
-  {
-    id: "5",
-    name: "Khuyến mãi",
-    slug: "khuyen-mai",
-    description: "Các bài viết về chương trình khuyến mãi",
-    isActive: false,
-    postsCount: 0
-  }
-];
+type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
-type Category = typeof initialCategories[0];
+interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  isActive: boolean;
+  postsCount: number;
+}
 
 const BlogCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  const [currentCategory, setCurrentCategory] = useState<BlogCategory | null>(null);
+  const queryClient = useQueryClient();
+
+  // Query to fetch categories
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['blogCategories'],
+    queryFn: async () => {
+      try {
+        const data = await ApiService.get<BlogCategory[]>(ENDPOINTS.BLOGS.CATEGORIES);
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching blog categories:", error);
+        toast.error("Không thể tải danh mục blog");
+        return [];
+      }
+    }
+  });
 
   // Add category form
-  const addForm = useForm<z.infer<typeof categoryFormSchema>>({
+  const addForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
@@ -125,7 +108,7 @@ const BlogCategories = () => {
   });
 
   // Edit category form
-  const editForm = useForm<z.infer<typeof categoryFormSchema>>({
+  const editForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
@@ -133,6 +116,54 @@ const BlogCategories = () => {
       description: "",
       isActive: true,
     },
+  });
+
+  // Mutation for adding a category
+  const addCategoryMutation = useMutation({
+    mutationFn: async (values: CategoryFormValues) => {
+      return await ApiService.post(ENDPOINTS.BLOGS.CATEGORIES, values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogCategories'] });
+      toast.success("Danh mục blog mới đã được thêm thành công!");
+      setIsAddDialogOpen(false);
+      addForm.reset();
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Không thể thêm danh mục blog");
+    }
+  });
+
+  // Mutation for updating a category
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: CategoryFormValues }) => {
+      return await ApiService.put(`${ENDPOINTS.BLOGS.CATEGORIES}/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogCategories'] });
+      toast.success("Danh mục blog đã được cập nhật thành công!");
+      setIsEditDialogOpen(false);
+      setCurrentCategory(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Không thể cập nhật danh mục blog");
+    }
+  });
+
+  // Mutation for deleting a category
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await ApiService.delete(`${ENDPOINTS.BLOGS.CATEGORIES}/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogCategories'] });
+      toast.success("Danh mục blog đã được xóa thành công!");
+      setIsDeleteDialogOpen(false);
+      setCurrentCategory(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Không thể xóa danh mục blog");
+    }
   });
 
   // Auto-generate slug from name for add form
@@ -154,7 +185,7 @@ const BlogCategories = () => {
     addForm.setValue("slug", generatedSlug);
   }
 
-  const handleAddCategory = (values: z.infer<typeof categoryFormSchema>) => {
+  const handleAddCategory = (values: CategoryFormValues) => {
     // Check if slug is already in use
     if (categories.some(cat => cat.slug === values.slug)) {
       addForm.setError("slug", { 
@@ -164,22 +195,10 @@ const BlogCategories = () => {
       return;
     }
 
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: values.name,
-      slug: values.slug,
-      description: values.description || "",
-      isActive: values.isActive,
-      postsCount: 0
-    };
-
-    setCategories([...categories, newCategory]);
-    toast.success("Danh mục blog mới đã được thêm thành công!");
-    setIsAddDialogOpen(false);
-    addForm.reset();
+    addCategoryMutation.mutate(values);
   };
 
-  const handleEditCategory = (values: z.infer<typeof categoryFormSchema>) => {
+  const handleEditCategory = (values: CategoryFormValues) => {
     if (currentCategory) {
       // Check if slug is already in use (excluding the current category)
       if (
@@ -193,20 +212,10 @@ const BlogCategories = () => {
         return;
       }
 
-      const updatedCategories = categories.map(category =>
-        category.id === currentCategory.id ? {
-          ...category,
-          name: values.name,
-          slug: values.slug,
-          description: values.description || "",
-          isActive: values.isActive,
-        } : category
-      );
-
-      setCategories(updatedCategories);
-      toast.success("Danh mục blog đã được cập nhật thành công!");
-      setIsEditDialogOpen(false);
-      setCurrentCategory(null);
+      updateCategoryMutation.mutate({
+        id: currentCategory.id,
+        data: values
+      });
     }
   };
 
@@ -218,14 +227,11 @@ const BlogCategories = () => {
         return;
       }
       
-      setCategories(categories.filter(category => category.id !== currentCategory.id));
-      toast.success("Danh mục blog đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setCurrentCategory(null);
+      deleteCategoryMutation.mutate(currentCategory.id);
     }
   };
 
-  const openEditDialog = (category: Category) => {
+  const openEditDialog = (category: BlogCategory) => {
     setCurrentCategory(category);
     editForm.reset({
       name: category.name,
@@ -236,10 +242,19 @@ const BlogCategories = () => {
     setIsEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (category: Category) => {
+  const openDeleteDialog = (category: BlogCategory) => {
     setCurrentCategory(category);
     setIsDeleteDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Đang tải danh mục...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -267,50 +282,58 @@ const BlogCategories = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell>
-                    <code className="bg-muted rounded px-1.5 py-0.5 text-sm">
-                      {category.slug}
-                    </code>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[300px] truncate">
-                      {category.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      category.isActive 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-gray-100 text-gray-800"
-                    }`}>
-                      {category.isActive ? "Hoạt động" : "Ẩn"}
-                    </span>
-                  </TableCell>
-                  <TableCell>{category.postsCount}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" /> Sửa
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => openDeleteDialog(category)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                      </Button>
-                    </div>
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell>
+                      <code className="bg-muted rounded px-1.5 py-0.5 text-sm">
+                        {category.slug}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[300px] truncate">
+                        {category.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        category.isActive 
+                          ? "bg-green-100 text-green-800" 
+                          : "bg-gray-100 text-gray-800"
+                      }`}>
+                        {category.isActive ? "Hoạt động" : "Ẩn"}
+                      </span>
+                    </TableCell>
+                    <TableCell>{category.postsCount}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(category)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Sửa
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => openDeleteDialog(category)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Xóa
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10">
+                    Chưa có danh mục blog nào. Hãy thêm danh mục mới.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -393,7 +416,16 @@ const BlogCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Thêm danh mục</Button>
+                <Button type="submit" disabled={addCategoryMutation.isPending}>
+                  {addCategoryMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Thêm danh mục'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -478,7 +510,16 @@ const BlogCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Lưu thay đổi</Button>
+                <Button type="submit" disabled={updateCategoryMutation.isPending}>
+                  {updateCategoryMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Lưu thay đổi'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -502,9 +543,16 @@ const BlogCategories = () => {
             <AlertDialogAction 
               onClick={handleDeleteCategory} 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={currentCategory?.postsCount && currentCategory.postsCount > 0}
+              disabled={currentCategory?.postsCount && currentCategory.postsCount > 0 || deleteCategoryMutation.isPending}
             >
-              Xóa
+              {deleteCategoryMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                'Xóa'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

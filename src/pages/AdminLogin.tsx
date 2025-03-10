@@ -29,6 +29,15 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+// Define a response type to fix TypeScript errors
+interface LoginResponse {
+  token: string;
+  refreshToken?: string;
+  role: string;
+  fullName?: string;
+  username?: string;
+}
+
 const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -46,7 +55,7 @@ const AdminLogin = () => {
 
     try {
       // Use real API instead of mock data
-      const response = await ApiService.post(ENDPOINTS.AUTH.LOGIN, {
+      const response = await ApiService.post<LoginResponse>(ENDPOINTS.AUTH.LOGIN, {
         username: values.email,
         password: values.password
       }, { requiresAuth: false });
