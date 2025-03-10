@@ -38,6 +38,7 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
   const { data: services, isLoading: isLoadingServices, isError: isServicesError } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
+      console.log("Fetching services data");
       return ApiService.get<Service[]>(ENDPOINTS.SERVICES.ALL, { requiresAuth: false });
     }
   });
@@ -46,6 +47,7 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
   const { data: specialists, isLoading: isLoadingSpecialists, isError: isSpecialistsError } = useQuery({
     queryKey: ['specialists'],
     queryFn: async () => {
+      console.log("Fetching specialists data");
       return ApiService.get<Specialist[]>(ENDPOINTS.SPECIALISTS.ALL, { requiresAuth: false });
     }
   });
@@ -72,13 +74,13 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
       const selectedServices = serviceIds
         .map(id => services && Array.isArray(services) ? 
               services.find((s) => String(s.id) === id) : undefined)
-        .filter(Boolean);
+        .filter(Boolean) as Service[];
       
       const selectedSpecialist = specialists && Array.isArray(specialists) ? 
         specialists.find((s) => String(s.id) === specialistId) : undefined;
 
       const bookingData: BookingData = {
-        services: selectedServices as Array<{id: string|number, name: string, price: number}>,
+        services: selectedServices,
         specialist: selectedSpecialist,
         date: value.date,
         time: value.time,

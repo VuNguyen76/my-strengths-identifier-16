@@ -8,32 +8,20 @@ import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
 import { Service } from "@/types/service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 
 const Services = () => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: services, isLoading, isError } = useQuery({
+    queryKey: ['featuredServices'],
+    queryFn: async () => {
+      console.log("Fetching featured services");
+      return ApiService.get<Service[]>(ENDPOINTS.SERVICES.FEATURED, { 
+        requiresAuth: false 
+      });
+    }
+  });
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      setLoading(true);
-      try {
-        const data = await ApiService.get<Service[]>(ENDPOINTS.SERVICES.FEATURED, { 
-          requiresAuth: false 
-        });
-        console.log("Services data:", data);
-        setServices(data || []);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        setServices([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchServices();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -62,6 +50,19 @@ const Services = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Dịch Vụ Của Chúng Tôi</h2>
+            <p className="text-red-500">Không thể tải dữ liệu dịch vụ. Vui lòng thử lại sau.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -71,7 +72,7 @@ const Services = () => {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">
-          {services.length > 0 ? (
+          {services && services.length > 0 ? (
             services.map((service) => (
               <Card key={service.id}>
                 <div className="aspect-video relative overflow-hidden rounded-t-lg">

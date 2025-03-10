@@ -5,14 +5,7 @@ import { BookingFormValues } from "./schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock } from "lucide-react";
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  description?: string;
-  duration?: number;
-}
+import { Service } from "@/types/service";
 
 interface ServiceMultiSelectProps {
   form: UseFormReturn<BookingFormValues>;

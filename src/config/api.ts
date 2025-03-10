@@ -2,6 +2,9 @@
 // API configuration constants
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api';
 
+// Log the API URL for debugging
+console.log("API URL:", API_URL);
+
 export const ENDPOINTS = {
   // Auth endpoints
   AUTH: {
@@ -61,8 +64,5 @@ export const ENDPOINTS = {
 // HTTP request headers
 export const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 };

@@ -47,7 +47,8 @@ class ApiService {
       const requestOptions: RequestInit = {
         method,
         headers: {
-          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+          ...(opts.requiresAuth ? getAuthHeaders() : {}),
           ...(opts.headers || {}),
         },
       };
@@ -57,7 +58,10 @@ class ApiService {
       }
       
       console.log(`Making ${method} request to ${url}`);
-      const response = await fetch(`${API_URL}${url}`, requestOptions);
+      const fullUrl = `${API_URL}${url}`;
+      console.log(`Full URL: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, requestOptions);
       
       // Handle HTTP errors
       if (!response.ok) {
@@ -95,17 +99,21 @@ class ApiService {
       // Parse JSON response
       try {
         const responseData = await response.json();
+        console.log("Response data:", responseData);
         return responseData as T;
       } catch (e) {
         console.error("Error parsing JSON response:", e);
         return {} as T;
       }
     } catch (error) {
+      // Log the full error for debugging
+      console.error("API Error:", error);
+      
       // Show error toast if enabled
       if (opts.showErrorToast) {
         toast.error((error as Error).message || 'Đã xảy ra lỗi');
       }
-      console.error("API Error:", error);
+      
       throw error;
     }
   }
