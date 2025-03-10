@@ -1,69 +1,87 @@
-# Welcome to your Lovable project
 
-## Project info
+# Spa Management System
 
-**URL**: https://lovable.dev/projects/170c060a-5049-4ef2-a785-2381024af336
+This application consists of a React frontend and a Java Spring Boot backend with SQLite database.
 
-## How can I edit this code?
+## Prerequisites
 
-There are several ways of editing your application.
+- Java 17 or higher
+- Node.js 16 or higher
+- NPM or Yarn
+- Maven (or use the included Maven wrapper)
 
-**Use Lovable**
+## Project Structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/170c060a-5049-4ef2-a785-2381024af336) and start prompting.
+- `/be` - Contains the Spring Boot backend
+- `/src` - Contains the React frontend
 
-Changes made via Lovable will be committed automatically to this repo.
+## Running the Application
 
-**Use your preferred IDE**
+### Option 1: Use the run script (Linux/Mac)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Make the script executable first:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+chmod +x run.sh
+```
 
-Follow these steps:
+Then run it:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+./run.sh
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Option 2: Run Backend and Frontend separately
 
-# Step 3: Install the necessary dependencies.
-npm i
+#### Backend:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd be
+./mvnw spring-boot:run
+```
+
+The backend will start on http://localhost:8081/api
+
+#### Frontend:
+
+```bash
+npm install (first time only)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The frontend will start on http://localhost:8080
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## API Documentation
 
-**Use GitHub Codespaces**
+Once the backend is running, you can access the Swagger UI at:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+http://localhost:8081/api/swagger-ui
 
-## What technologies are used for this project?
+## Default Admin Account
 
-This project is built with .
+Username: admin
+Password: admin123
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Default Staff Account
 
-## How can I deploy this project?
+Username: staff
+Password: staff123
 
-Simply open [Lovable](https://lovable.dev/projects/170c060a-5049-4ef2-a785-2381024af336) and click on Share -> Publish.
+## Database
 
-## I want to use a custom domain - is that possible?
+The application uses SQLite, so no external database setup is required. The database file will be created automatically in the root directory as `spa.db`.
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Features
+
+- User authentication with JWT
+- Role-based access control
+- Service booking and management
+- Staff and specialist management
+- Transaction tracking
+- Reports and analytics
+
+## Notes
+
+- The frontend and backend are completely decoupled
+- All API requests from the frontend to the backend include the JWT token for authentication
+- Database is SQLite for easy portability and setup
