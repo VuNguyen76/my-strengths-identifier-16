@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -21,96 +21,148 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { Star, MessageCircle } from "lucide-react";
+import { Star, MessageCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { BOOKING_STATUSES } from "@/components/booking/constants";
 
-const serviceHistory = [
-  {
-    id: "1",
-    service: "Chăm sóc da cơ bản",
-    specialist: "Nguyễn Thị A",
-    date: "2023-09-15T09:00:00",
-    status: "completed",
-    price: 450000,
-    rated: true,
-    rating: 5,
-    feedback: "Dịch vụ rất tốt, nhân viên thân thiện"
-  },
-  {
-    id: "2",
-    service: "Trị mụn chuyên sâu",
-    specialist: "Trần Văn B",
-    date: "2023-08-10T15:30:00",
-    status: "completed",
-    price: 650000,
-    rated: true,
-    rating: 4,
-    feedback: "Hiệu quả tốt nhưng giá hơi cao"
-  },
-  {
-    id: "3",
-    service: "Massage mặt",
-    specialist: "Lê Thị C",
-    date: "2023-07-28T11:00:00",
-    status: "completed",
-    price: 350000,
-    rated: false,
-    rating: 0,
-    feedback: ""
-  },
-  {
-    id: "4",
-    service: "Trẻ hóa da",
-    specialist: "Phạm Văn D",
-    date: "2023-06-05T14:00:00",
-    status: "completed",
-    price: 850000,
-    rated: true,
-    rating: 5,
-    feedback: "Dịch vụ xuất sắc"
-  },
-  {
-    id: "5",
-    service: "Tẩy trang chuyên sâu",
-    specialist: "Hoàng Thị E",
-    date: "2023-05-20T10:30:00",
-    status: "completed",
-    price: 250000,
-    rated: true,
-    rating: 3,
-    feedback: "Dịch vụ ổn"
-  },
-];
+interface BookingHistory {
+  id: number;
+  serviceName: string;
+  specialistName: string;
+  bookingDate: string;
+  bookingTime: string;
+  status: string;
+  price: number;
+  rating?: number;
+  feedback?: string;
+}
 
 const UserHistory = () => {
   const [activeTab, setActiveTab] = useState("all");
-  const [history, setHistory] = useState(serviceHistory);
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<number | null>(null);
   const [currentRating, setCurrentRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
+  const queryClient = useQueryClient();
+  
+  // Fetch booking history
+  const { data: bookingHistory, isLoading, isError } = useQuery({
+    queryKey: ['bookingHistory'],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+      
+      const response = await fetch('http://localhost:8081/api/bookings/history', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error("Không thể tải lịch sử đặt lịch");
+      }
+      
+      return response.json();
+    }
+  });
+
+  // Rating mutation
+  const ratingMutation = useMutation({
+    mutationFn: async ({ bookingId, rating, feedback }: { bookingId: number, rating: number, feedback?: string }) => {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+      
+      const response = await fetch(`http://localhost:8081/api/bookings/${bookingId}/rate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ rating, feedback })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Không thể gửi đánh giá");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookingHistory'] });
+      toast.success("Đánh giá của bạn đã được ghi nhận!");
+      setRatingDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi gửi đánh giá: ${error.message}`);
+    }
+  });
+
+  // Feedback mutation
+  const feedbackMutation = useMutation({
+    mutationFn: async ({ bookingId, feedback }: { bookingId: number, feedback: string }) => {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+      
+      const response = await fetch(`http://localhost:8081/api/bookings/${bookingId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ feedback })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Không thể gửi phản hồi");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookingHistory'] });
+      toast.success("Phản hồi của bạn đã được gửi!");
+      setFeedbackDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi gửi phản hồi: ${error.message}`);
+    }
+  });
   
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
+      case BOOKING_STATUSES.COMPLETED:
         return <Badge className="bg-green-500">Hoàn thành</Badge>;
-      case "canceled":
+      case BOOKING_STATUSES.CANCELLED:
         return <Badge className="bg-red-500">Đã hủy</Badge>;
+      case BOOKING_STATUSES.CONFIRMED:
+        return <Badge className="bg-blue-500">Đã xác nhận</Badge>;
+      case BOOKING_STATUSES.PENDING:
+        return <Badge className="bg-yellow-500">Đang chờ</Badge>;
       default:
         return <Badge>Không xác định</Badge>;
     }
   };
 
-  const getRatingStars = (rating: number, interactive = false, itemId?: string) => {
+  const getRatingStars = (rating: number | undefined, interactive = false, itemId?: number) => {
     return (
       <div className="flex">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
             className={`h-4 w-4 ${
-              star <= (interactive ? hoverRating || currentRating : rating) 
+              (interactive ? hoverRating || currentRating : rating || 0) >= star 
                 ? "text-yellow-400 fill-yellow-400" 
                 : "text-gray-300"
             } ${interactive ? "cursor-pointer" : ""}`}
@@ -123,54 +175,46 @@ const UserHistory = () => {
     );
   };
 
-  const openRatingDialog = (serviceId: string) => {
-    setSelectedService(serviceId);
+  const openRatingDialog = (bookingId: number) => {
+    setSelectedService(bookingId);
     setCurrentRating(0);
     setHoverRating(0);
+    setFeedbackText("");
     setRatingDialogOpen(true);
   };
 
-  const openFeedbackDialog = (serviceId: string) => {
-    const service = history.find(item => item.id === serviceId);
-    setSelectedService(serviceId);
-    setFeedbackText(service?.feedback || "");
+  const openFeedbackDialog = (bookingId: number) => {
+    const booking = bookingHistory?.find(item => item.id === bookingId);
+    setSelectedService(bookingId);
+    setFeedbackText(booking?.feedback || "");
     setFeedbackDialogOpen(true);
   };
 
   const submitRating = () => {
     if (selectedService) {
-      setHistory(prevHistory =>
-        prevHistory.map(item =>
-          item.id === selectedService
-            ? { ...item, rated: true, rating: currentRating }
-            : item
-        )
-      );
-      setRatingDialogOpen(false);
-      toast.success("Đánh giá của bạn đã được ghi nhận!");
+      ratingMutation.mutate({ 
+        bookingId: selectedService, 
+        rating: currentRating, 
+        feedback: feedbackText 
+      });
     }
   };
 
   const submitFeedback = () => {
     if (selectedService) {
-      setHistory(prevHistory =>
-        prevHistory.map(item =>
-          item.id === selectedService
-            ? { ...item, feedback: feedbackText }
-            : item
-        )
-      );
-      setFeedbackDialogOpen(false);
-      toast.success("Phản hồi của bạn đã được gửi!");
+      feedbackMutation.mutate({
+        bookingId: selectedService,
+        feedback: feedbackText
+      });
     }
   };
 
-  const filteredHistory = history.filter((item) => {
+  const filteredHistory = bookingHistory ? bookingHistory.filter((item: BookingHistory) => {
     if (activeTab === "all") return true;
-    if (activeTab === "rated") return item.rated;
-    if (activeTab === "unrated") return !item.rated;
+    if (activeTab === "rated") return Boolean(item.rating);
+    if (activeTab === "unrated") return !item.rating && item.status === BOOKING_STATUSES.COMPLETED;
     return true;
-  });
+  }) : [];
 
   return (
     <div className="space-y-6">
@@ -191,76 +235,86 @@ const UserHistory = () => {
               <CardTitle>Lịch sử sử dụng dịch vụ</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dịch vụ</TableHead>
-                    <TableHead>Chuyên viên</TableHead>
-                    <TableHead>Ngày giờ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Giá</TableHead>
-                    <TableHead>Đánh giá</TableHead>
-                    <TableHead className="text-right">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredHistory.length > 0 ? (
-                    filteredHistory.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.service}</TableCell>
-                        <TableCell>{item.specialist}</TableCell>
-                        <TableCell>
-                          {format(new Date(item.date), "dd/MM/yyyy HH:mm")}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(item.status)}</TableCell>
-                        <TableCell>
-                          {new Intl.NumberFormat("vi-VN", {
-                            style: "currency",
-                            currency: "VND",
-                          }).format(item.price)}
-                        </TableCell>
-                        <TableCell>
-                          {item.rated ? (
-                            getRatingStars(item.rating)
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Chưa đánh giá</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            {!item.rated && (
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isError ? (
+                <div className="py-8 text-center text-red-500">
+                  Không thể tải lịch sử dịch vụ. Vui lòng thử lại sau.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dịch vụ</TableHead>
+                      <TableHead>Chuyên viên</TableHead>
+                      <TableHead>Ngày giờ</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Giá</TableHead>
+                      <TableHead>Đánh giá</TableHead>
+                      <TableHead className="text-right">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredHistory.length > 0 ? (
+                      filteredHistory.map((item: BookingHistory) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.serviceName}</TableCell>
+                          <TableCell>{item.specialistName}</TableCell>
+                          <TableCell>
+                            {format(new Date(`${item.bookingDate}T${item.bookingTime}`), "dd/MM/yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(item.status)}</TableCell>
+                          <TableCell>
+                            {new Intl.NumberFormat("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            }).format(item.price)}
+                          </TableCell>
+                          <TableCell>
+                            {item.rating ? (
+                              getRatingStars(item.rating)
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Chưa đánh giá</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              {item.status === BOOKING_STATUSES.COMPLETED && !item.rating && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center"
+                                  onClick={() => openRatingDialog(item.id)}
+                                >
+                                  <Star className="h-4 w-4 mr-1" />
+                                  Đánh giá
+                                </Button>
+                              )}
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 className="flex items-center"
-                                onClick={() => openRatingDialog(item.id)}
+                                onClick={() => openFeedbackDialog(item.id)}
                               >
-                                <Star className="h-4 w-4 mr-1" />
-                                Đánh giá
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                Phản hồi
                               </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex items-center"
-                              onClick={() => openFeedbackDialog(item.id)}
-                            >
-                              <MessageCircle className="h-4 w-4 mr-1" />
-                              Phản hồi
-                            </Button>
-                          </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-6">
+                          Không có lịch sử dịch vụ nào
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6">
-                        Không có lịch sử dịch vụ nào
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -284,8 +338,26 @@ const UserHistory = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRatingDialogOpen(false)}>Hủy</Button>
-            <Button onClick={submitRating} disabled={currentRating === 0}>Gửi đánh giá</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setRatingDialogOpen(false)}
+              disabled={ratingMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button 
+              onClick={submitRating} 
+              disabled={currentRating === 0 || ratingMutation.isPending}
+            >
+              {ratingMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang gửi...
+                </>
+              ) : (
+                "Gửi đánh giá"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -305,8 +377,26 @@ const UserHistory = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)}>Hủy</Button>
-            <Button onClick={submitFeedback}>Gửi phản hồi</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setFeedbackDialogOpen(false)} 
+              disabled={feedbackMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button 
+              onClick={submitFeedback} 
+              disabled={!feedbackText.trim() || feedbackMutation.isPending}
+            >
+              {feedbackMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang gửi...
+                </>
+              ) : (
+                "Gửi phản hồi"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

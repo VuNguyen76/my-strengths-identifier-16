@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
+import { Loader2 } from "lucide-react";
 
 interface JwtPayload {
   sub: string;
@@ -49,7 +50,7 @@ const Dashboard = () => {
           });
           
           if (!response.ok) {
-            throw new Error("Failed to fetch user data");
+            throw new Error("Không thể xác thực tài khoản");
           }
           
           const userData = await response.json();
@@ -57,11 +58,11 @@ const Dashboard = () => {
           
           // Redirect based on role
           if (userData.role === "ROLE_ADMIN") {
-            navigate("/admin/dashboard");
+            navigate("/admin");
           } else if (userData.role === "ROLE_STAFF") {
             navigate("/staff/dashboard");
           } else {
-            navigate("/user/dashboard");
+            navigate("/dashboard");
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -92,7 +93,7 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">
-          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="text-primary font-medium">Đang tải...</p>
         </div>
       </div>

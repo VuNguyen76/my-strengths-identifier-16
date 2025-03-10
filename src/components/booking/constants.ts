@@ -1,5 +1,6 @@
 
-// Dummy data - these will be replaced by API calls in production
+// Constants for booking system - these will be populated from API
+
 export const SERVICES = [];
 
 export const SPECIALISTS = [];
@@ -10,15 +11,15 @@ export const TIME_SLOTS = [
 ];
 
 export const BOOKING_STATUSES = {
-  UPCOMING: "upcoming",
-  COMPLETED: "completed",
-  CANCELED: "canceled",
-  PENDING: "pending"
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED"
 };
 
 export const PAYMENT_STATUSES = {
-  COMPLETED: "completed",
-  PENDING: "pending",
-  FAILED: "failed",
-  REFUNDED: "refunded"
+  COMPLETED: "COMPLETED",
+  PENDING: "PENDING",
+  FAILED: "FAILED",
+  REFUNDED: "REFUNDED"
 };
