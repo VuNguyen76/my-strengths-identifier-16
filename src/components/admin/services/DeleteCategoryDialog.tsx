@@ -15,6 +15,7 @@ import { toast } from "sonner";
 interface DeleteCategoryDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   category: {
     id: string;
     name: string;
@@ -25,6 +26,7 @@ interface DeleteCategoryDialogProps {
 export function DeleteCategoryDialog({
   isOpen,
   onClose,
+  onOpenChange,
   category,
   onDelete,
 }: DeleteCategoryDialogProps) {
@@ -58,7 +60,7 @@ export function DeleteCategoryDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Xác nhận xóa danh mục</DialogTitle>

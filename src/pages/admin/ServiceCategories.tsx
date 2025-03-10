@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -235,8 +234,9 @@ const ServiceCategories = () => {
       <DeleteCategoryDialog 
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
         category={currentCategory}
-        onDeleteCategory={handleDeleteCategory}
+        onDelete={handleDeleteCategory}
       />
     </div>
   );
