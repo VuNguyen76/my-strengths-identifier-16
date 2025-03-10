@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { 
   AlertTriangle,
-  Settings,
   FileDown,
   FileUp,
   RefreshCcw,
@@ -24,31 +23,42 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const AdminSettings = () => {
-  const [siteSettings, setSiteSettings] = useState({
-    siteName: "Beauty Spa",
-    siteDescription: "Nơi chăm sóc sắc đẹp hoàn hảo",
-    contactEmail: "contact@beautyspa.vn",
-    contactPhone: "0901234567",
-    address: "123 Đường ABC, Quận XYZ, TP. Hồ Chí Minh",
-    enableBooking: true,
-    enableRegistration: true,
-    maintenanceMode: false,
-    smtpHost: "smtp.example.com",
-    smtpPort: "587",
-    smtpUser: "noreply@beautyspa.vn",
-    smtpPassword: "●●●●●●●●●●"
-  });
+interface BackupData {
+  settings: typeof defaultSettings;
+  date: string;
+  version: string;
+}
 
+const defaultSettings = {
+  siteName: "Beauty Spa",
+  siteDescription: "Nơi chăm sóc sắc đẹp hoàn hảo",
+  contactEmail: "contact@beautyspa.vn",
+  contactPhone: "0901234567",
+  address: "123 Đường ABC, Quận XYZ, TP. Hồ Chí Minh",
+  enableBooking: true,
+  enableRegistration: true,
+  maintenanceMode: false,
+  smtpHost: "smtp.example.com",
+  smtpPort: "587",
+  smtpUser: "noreply@beautyspa.vn",
+  smtpPassword: "●●●●●●●●●●"
+};
+
+const AdminSettings = () => {
+  const [siteSettings, setSiteSettings] = useState(defaultSettings);
   const [passwordData, setPasswordData] = useState({
     current: '',
     new: '',
     confirm: ''
   });
 
-  const [backupName, setBackupName] = useState(`backup_${new Date().toISOString().split('T')[0]}.zip`);
+  const [backupName, setBackupName] = useState(`backup_${new Date().toISOString().split('T')[0]}.json`);
   const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(null);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [backups, setBackups] = useState<{name: string, date: string}[]>([
+    {name: "backup_20230915_120000.json", date: "15/09/2023 12:00"},
+    {name: "backup_20230908_093045.json", date: "08/09/2023 09:30"}
+  ]);
 
   const handleSiteSettingChange = (
     key: keyof typeof siteSettings,
@@ -76,27 +86,46 @@ const AdminSettings = () => {
   };
 
   const handleBackupData = () => {
-    // Create a simple backup file with dummy data
-    const backupData = {
-      settings: siteSettings,
-      date: new Date().toISOString(),
-      version: "1.0.0"
-    };
-    
-    const jsonData = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create a download link and trigger it
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = backupName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success("Bản sao lưu đã được tạo thành công");
+    try {
+      // Create a backup data object
+      const backupData: BackupData = {
+        settings: siteSettings,
+        date: new Date().toISOString(),
+        version: "1.0.0"
+      };
+      
+      // Convert to JSON string
+      const jsonData = JSON.stringify(backupData, null, 2);
+      
+      // Create a Blob from the JSON string
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      
+      // Create a download URL for the Blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element to trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = backupName;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      // Add the backup to the list of backups
+      const newBackup = {
+        name: backupName,
+        date: new Date().toLocaleString('vi-VN')
+      };
+      
+      setBackups(prev => [newBackup, ...prev]);
+      toast.success("Bản sao lưu đã được tạo thành công");
+    } catch (error) {
+      console.error("Backup error:", error);
+      toast.error("Có lỗi khi tạo bản sao lưu");
+    }
   };
 
   const handleRestoreBackup = () => {
@@ -110,7 +139,7 @@ const AdminSettings = () => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const backupData = JSON.parse(content);
+        const backupData = JSON.parse(content) as BackupData;
         
         // Restore settings
         if (backupData.settings) {
@@ -135,21 +164,6 @@ const AdminSettings = () => {
   };
 
   const handleResetSettings = () => {
-    const defaultSettings = {
-      siteName: "Beauty Spa",
-      siteDescription: "Nơi chăm sóc sắc đẹp hoàn hảo",
-      contactEmail: "contact@beautyspa.vn",
-      contactPhone: "0901234567",
-      address: "123 Đường ABC, Quận XYZ, TP. Hồ Chí Minh",
-      enableBooking: true,
-      enableRegistration: true,
-      maintenanceMode: false,
-      smtpHost: "smtp.example.com",
-      smtpPort: "587",
-      smtpUser: "noreply@beautyspa.vn",
-      smtpPassword: "●●●●●●●●●●"
-    };
-    
     setSiteSettings(defaultSettings);
     toast.success("Cài đặt đã được đặt lại về mặc định");
   };
@@ -176,6 +190,36 @@ const AdminSettings = () => {
       new: '',
       confirm: ''
     });
+  };
+
+  const handleDownloadBackup = (backupName: string) => {
+    // In a real app, this would download an existing backup from the server
+    // Here we'll create a new one with the same name for demonstration
+    try {
+      const backupData = {
+        settings: siteSettings,
+        date: new Date().toISOString(),
+        version: "1.0.0"
+      };
+      
+      const jsonData = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = backupName;
+      document.body.appendChild(a);
+      a.click();
+      
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Đã tải xuống bản sao lưu: ${backupName}`);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Có lỗi khi tải xuống bản sao lưu");
+    }
   };
 
   return (
@@ -486,7 +530,7 @@ const AdminSettings = () => {
                 </select>
               </div>
 
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => toast.success("Thiết lập bảo mật đã được lưu!")}>
                 <Save size={16} />
                 Lưu thiết lập bảo mật
               </Button>
@@ -573,20 +617,25 @@ const AdminSettings = () => {
                     <span className="font-medium">Ngày tạo</span>
                   </div>
                   <div className="divide-y">
-                    <div className="p-3 flex justify-between items-center hover:bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <DatabaseBackup className="h-4 w-4 text-blue-500" />
-                        <span>backup_20230915_120000.zip</span>
+                    {backups.map((backup, index) => (
+                      <div key={index} className="p-3 flex justify-between items-center hover:bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <DatabaseBackup className="h-4 w-4 text-blue-500" />
+                          <span>{backup.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{backup.date}</Badge>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDownloadBackup(backup.name)}
+                            title="Tải xuống"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Badge variant="outline">15/09/2023 12:00</Badge>
-                    </div>
-                    <div className="p-3 flex justify-between items-center hover:bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <DatabaseBackup className="h-4 w-4 text-blue-500" />
-                        <span>backup_20230908_093045.zip</span>
-                      </div>
-                      <Badge variant="outline">08/09/2023 09:30</Badge>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -40,11 +40,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Download, Search, Filter } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Search, Filter, Eye } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
 const transactionsData = [
   {
@@ -153,10 +154,7 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage] = useState(1);
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined,
   });
@@ -249,6 +247,21 @@ const Transactions = () => {
       console.error("Error exporting to Excel:", error);
       toast.error("Có lỗi khi xuất Excel!");
     }
+  };
+
+  // Generate PDF for viewing the transaction
+  const viewTransaction = (id: string) => {
+    // For demonstration, just show a toast
+    toast.info(`Đang hiển thị hóa đơn: ${id}`);
+    
+    // In real implementation, this would open a dialog or generate a PDF
+    // For now, we'll just simulate it
+    setTimeout(() => {
+      const transaction = transactionsData.find(t => t.id === id);
+      if (transaction) {
+        toast.success(`Đã mở hóa đơn cho giao dịch ${id}`);
+      }
+    }, 500);
   };
 
   // Apply date filter
@@ -367,6 +380,7 @@ const Transactions = () => {
                   <TableHead>Số tiền</TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead>Phương thức</TableHead>
+                  <TableHead>Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -390,11 +404,31 @@ const Transactions = () => {
                       </TableCell>
                       <TableCell>{getStatusBadge(transaction.status)}</TableCell>
                       <TableCell>{transaction.paymentMethod}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => viewTransaction(transaction.id)}
+                            title="Xem hóa đơn"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={exportToExcel}
+                            title="Tải hóa đơn"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6">
+                    <TableCell colSpan={9} className="text-center py-6">
                       Không tìm thấy giao dịch nào
                     </TableCell>
                   </TableRow>
