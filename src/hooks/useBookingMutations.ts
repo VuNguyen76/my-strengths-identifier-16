@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
 
-interface BookingData {
+export interface BookingData {
   customerName: string;
   email: string;
   phone: string;
@@ -20,10 +20,24 @@ interface UseMutationOptions {
   onError?: (error: Error) => void;
 }
 
+export interface BookingResponse {
+  id: string;
+  service: string;
+  specialist: string;
+  date: string;
+  status: string;
+  price: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  paymentMethod?: string;
+  notes?: string;
+}
+
 export const useCreateBooking = (options?: UseMutationOptions) => {
   return useMutation({
-    mutationFn: async (bookingData: BookingData) => {
-      return ApiService.post(ENDPOINTS.BOOKINGS.ADMIN, bookingData);
+    mutationFn: async (bookingData: BookingData): Promise<BookingResponse> => {
+      return ApiService.post<BookingResponse>(ENDPOINTS.BOOKINGS.ADMIN, bookingData);
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {
@@ -35,8 +49,8 @@ export const useCreateBooking = (options?: UseMutationOptions) => {
 
 export const useCancelBooking = (options?: UseMutationOptions) => {
   return useMutation({
-    mutationFn: async (bookingId: string) => {
-      return ApiService.patch(ENDPOINTS.BOOKINGS.CANCEL(bookingId), {});
+    mutationFn: async (bookingId: string): Promise<BookingResponse> => {
+      return ApiService.patch<BookingResponse>(ENDPOINTS.BOOKINGS.CANCEL(bookingId), {});
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {
@@ -48,8 +62,8 @@ export const useCancelBooking = (options?: UseMutationOptions) => {
 
 export const useUpdateBookingStatus = (options?: UseMutationOptions) => {
   return useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: string, status: string }) => {
-      return ApiService.patch(ENDPOINTS.BOOKINGS.STATUS(bookingId), { status });
+    mutationFn: async ({ bookingId, status }: { bookingId: string, status: string }): Promise<BookingResponse> => {
+      return ApiService.patch<BookingResponse>(ENDPOINTS.BOOKINGS.STATUS(bookingId), { status });
     },
     onSuccess: options?.onSuccess,
     onError: (error) => {

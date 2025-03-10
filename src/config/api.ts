@@ -40,6 +40,12 @@ export const ENDPOINTS = {
     USER: '/user/dashboard',
     ADMIN: '/admin/dashboard',
   },
+  // Reports endpoints
+  REPORTS: {
+    ALL: '/admin/reports',
+    REVENUE: '/admin/reports/revenue',
+    BOOKINGS: '/admin/reports/bookings',
+  },
 };
 
 // HTTP request headers
