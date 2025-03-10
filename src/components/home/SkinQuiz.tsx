@@ -41,7 +41,7 @@ const SkinQuiz = () => {
           
           <div className="relative">
             <img
-              src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80"
+              src="/placeholder.svg"
               alt="Trắc nghiệm da"
               className="rounded-lg shadow-xl"
             />

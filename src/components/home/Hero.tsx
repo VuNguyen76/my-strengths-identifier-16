@@ -7,7 +7,7 @@ const Hero = () => {
   return (
     <div className="relative min-h-[600px] flex items-center pt-20">
       <div className="absolute inset-0 z-0">
-        <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')] bg-cover bg-center">
+        <div className="w-full h-full bg-[url('/placeholder.svg')] bg-cover bg-center">
           <div className="w-full h-full bg-black/50"></div>
         </div>
       </div>

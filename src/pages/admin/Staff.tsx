@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -37,64 +37,65 @@ import {
   UserPlus, 
   Edit, 
   Trash, 
-  Star 
+  Star,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Dummy data for specialists
-const staffData = [
-  {
-    id: "1",
-    name: "Nguyễn Thị A",
-    specialty: "Chăm sóc da",
-    email: "nguyenthia@example.com",
-    phone: "0901234567",
-    experience: "5 năm",
-    rating: 4.8,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330"
-  },
-  {
-    id: "2",
-    name: "Trần Văn B",
-    specialty: "Trị mụn",
-    email: "tranvanb@example.com",
-    phone: "0912345678",
-    experience: "3 năm",
-    rating: 4.5,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
-  },
-  {
-    id: "3",
-    name: "Lê Thị C",
-    specialty: "Massage mặt",
-    email: "lethic@example.com",
-    phone: "0923456789",
-    experience: "7 năm",
-    rating: 4.9,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2"
-  },
-  {
-    id: "4",
-    name: "Phạm Văn D",
-    specialty: "Trẻ hóa da",
-    email: "phamvand@example.com",
-    phone: "0934567890",
-    experience: "4 năm",
-    rating: 4.6,
-    status: "inactive",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e"
-  },
-];
+interface Specialist {
+  id: string;
+  name: string;
+  specialty: string;
+  email: string;
+  phone: string;
+  experience: string;
+  rating: number;
+  status: string;
+  image: string;
+  bio?: string;
+}
 
 const AdminStaff = () => {
-  const [staff, setStaff] = useState(staffData);
+  const [staff, setStaff] = useState<Specialist[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<(typeof staffData)[0] | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Specialist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  const fetchStaff = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch('http://localhost:8081/api/admin/specialists', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch specialists');
+      }
+      
+      const data = await response.json();
+      setStaff(data);
+    } catch (error) {
+      console.error('Error fetching specialists:', error);
+      toast.error('Không thể tải danh sách chuyên viên. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -110,61 +111,143 @@ const AdminStaff = () => {
     );
   });
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
+    setFormLoading(true);
     
-    const newStaff = {
-      id: Date.now().toString(),
-      name: formData.get("name") as string,
-      specialty: formData.get("specialty") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      experience: formData.get("experience") as string,
-      rating: 0,
-      status: "active",
-      image: formData.get("image") as string || "https://via.placeholder.com/150",
-    };
-    
-    setStaff([...staff, newStaff]);
-    toast.success("Đã thêm chuyên viên mới thành công");
-    setIsAddStaffDialogOpen(false);
-    form.reset();
-  };
-
-  const handleEditStaff = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedStaff) {
+    try {
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
       
-      setStaff(staff.map(member => 
-        member.id === selectedStaff.id 
-          ? { 
-              ...member, 
-              name: formData.get("name") as string,
-              specialty: formData.get("specialty") as string,
-              email: formData.get("email") as string,
-              phone: formData.get("phone") as string,
-              experience: formData.get("experience") as string,
-              image: formData.get("image") as string || member.image,
-            } 
-          : member
-      ));
+      const staffData = {
+        name: formData.get("name"),
+        specialty: formData.get("specialty"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        experience: formData.get("experience"),
+        image: formData.get("image") || "/placeholder.svg",
+        bio: formData.get("bio")
+      };
       
-      toast.success(`Đã cập nhật thông tin chuyên viên ${selectedStaff.name} thành công`);
-      setIsEditStaffDialogOpen(false);
-      setSelectedStaff(null);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch('http://localhost:8081/api/admin/specialists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(staffData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add specialist');
+      }
+      
+      const newSpecialist = await response.json();
+      setStaff([...staff, newSpecialist]);
+      toast.success("Đã thêm chuyên viên mới thành công");
+      setIsAddStaffDialogOpen(false);
+      form.reset();
+    } catch (error) {
+      console.error('Error adding specialist:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể thêm chuyên viên. Vui lòng thử lại sau.');
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  const handleDeleteStaff = (staffId: string) => {
-    setStaff(staff.filter(member => member.id !== staffId));
-    toast.success("Đã xóa chuyên viên thành công");
+  const handleEditStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormLoading(true);
+    
+    if (selectedStaff) {
+      try {
+        const form = e.target as HTMLFormElement;
+        const formData = new FormData(form);
+        
+        const staffData = {
+          name: formData.get("name"),
+          specialty: formData.get("specialty"),
+          email: formData.get("email"),
+          phone: formData.get("phone"),
+          experience: formData.get("experience"),
+          image: formData.get("image") || selectedStaff.image,
+          bio: formData.get("bio")
+        };
+        
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Bạn cần đăng nhập lại");
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8081/api/admin/specialists/${selectedStaff.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(staffData)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update specialist');
+        }
+        
+        const updatedSpecialist = await response.json();
+        
+        setStaff(staff.map(member => 
+          member.id === selectedStaff.id ? updatedSpecialist : member
+        ));
+        
+        toast.success(`Đã cập nhật thông tin chuyên viên ${selectedStaff.name} thành công`);
+        setIsEditStaffDialogOpen(false);
+        setSelectedStaff(null);
+      } catch (error) {
+        console.error('Error updating specialist:', error);
+        toast.error(error instanceof Error ? error.message : 'Không thể cập nhật chuyên viên. Vui lòng thử lại sau.');
+      } finally {
+        setFormLoading(false);
+      }
+    }
   };
 
-  const openEditDialog = (member: (typeof staffData)[0]) => {
+  const handleDeleteStaff = async (staffId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8081/api/admin/specialists/${staffId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete specialist');
+      }
+      
+      setStaff(staff.filter(member => member.id !== staffId));
+      toast.success("Đã xóa chuyên viên thành công");
+    } catch (error) {
+      console.error('Error deleting specialist:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa chuyên viên. Vui lòng thử lại sau.');
+    }
+  };
+
+  const openEditDialog = (member: Specialist) => {
     setSelectedStaff(member);
     setIsEditStaffDialogOpen(true);
   };
@@ -174,6 +257,14 @@ const AdminStaff = () => {
       ? <Badge className="bg-green-500">Đang làm việc</Badge>
       : <Badge className="bg-gray-500">Nghỉ việc</Badge>;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -236,7 +327,16 @@ const AdminStaff = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Thêm chuyên viên</Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Thêm chuyên viên'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -285,7 +385,7 @@ const AdminStaff = () => {
                             alt={member.name} 
                             className="h-8 w-8 rounded-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://via.placeholder.com/150";
+                              (e.target as HTMLImageElement).src = "/placeholder.svg";
                             }}
                           />
                           <span>{member.name}</span>
@@ -298,7 +398,7 @@ const AdminStaff = () => {
                       <TableCell>
                         <div className="flex items-center">
                           <Star className="h-4 w-4 text-yellow-400 mr-1 fill-yellow-400" />
-                          <span>{member.rating}</span>
+                          <span>{member.rating || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(member.status)}</TableCell>
@@ -331,8 +431,8 @@ const AdminStaff = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                      Không tìm thấy chuyên viên nào
+                    <TableCell colSpan={8} className="text-center py-10">
+                      {searchQuery ? "Không tìm thấy chuyên viên nào" : "Chưa có chuyên viên nào. Hãy thêm chuyên viên mới."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -418,13 +518,23 @@ const AdminStaff = () => {
                   <Textarea 
                     id="edit-bio" 
                     name="bio" 
+                    defaultValue={selectedStaff.bio || ""}
                     placeholder="Thông tin chi tiết về chuyên viên..." 
                     rows={3}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Lưu thay đổi</Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Lưu thay đổi'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           )}

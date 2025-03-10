@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -36,65 +36,62 @@ import {
   UserPlus, 
   Edit, 
   Trash, 
-  Shield 
+  Shield,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Dummy data for users
-const usersData = [
-  {
-    id: "1",
-    name: "Nguyễn Văn A",
-    email: "nguyenvana@example.com",
-    phone: "0901234567",
-    role: "user",
-    status: "active",
-    createdAt: "2023-05-10T10:00:00",
-  },
-  {
-    id: "2",
-    name: "Trần Thị B",
-    email: "tranthib@example.com",
-    phone: "0912345678",
-    role: "admin",
-    status: "active",
-    createdAt: "2023-06-15T11:30:00",
-  },
-  {
-    id: "3",
-    name: "Lê Văn C",
-    email: "levanc@example.com",
-    phone: "0923456789",
-    role: "user",
-    status: "inactive",
-    createdAt: "2023-04-20T09:45:00",
-  },
-  {
-    id: "4",
-    name: "Phạm Thị D",
-    email: "phamthid@example.com",
-    phone: "0934567890",
-    role: "user",
-    status: "active",
-    createdAt: "2023-07-05T14:20:00",
-  },
-  {
-    id: "5",
-    name: "Hoàng Văn E",
-    email: "hoangvane@example.com",
-    phone: "0945678901",
-    role: "user",
-    status: "active",
-    createdAt: "2023-03-12T08:15:00",
-  },
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  createdAt: string;
+}
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState(usersData);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<(typeof usersData)[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch('http://localhost:8081/api/admin/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -109,45 +106,149 @@ const AdminUsers = () => {
     );
   });
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Người dùng mới đã được thêm thành công");
-    setIsAddUserDialogOpen(false);
+    setFormLoading(true);
+    
+    try {
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      const userData = {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        password: formData.get("password"),
+        role: formData.get("role")
+      };
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch('http://localhost:8081/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(userData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add user');
+      }
+      
+      toast.success("Người dùng mới đã được thêm thành công");
+      setIsAddUserDialogOpen(false);
+      form.reset();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể thêm người dùng. Vui lòng thử lại sau.');
+    } finally {
+      setFormLoading(false);
+    }
   };
 
-  const handleEditUser = (user: (typeof usersData)[0]) => {
+  const handleEditUser = (user: User) => {
     setSelectedUser(user);
     toast.info("Chức năng chỉnh sửa người dùng sẽ được cập nhật sau");
   };
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId));
-    toast.success("Đã xóa người dùng thành công");
-  };
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
 
-  const handleChangeRole = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedUser) {
-      setUsers(users.map(user => 
-        user.id === selectedUser.id 
-          ? { ...user, role: user.role === 'user' ? 'admin' : 'user' } 
-          : user
-      ));
-      toast.success(`Đã thay đổi vai trò của ${selectedUser.name} thành công`);
-      setIsRoleDialogOpen(false);
-      setSelectedUser(null);
+      const response = await fetch(`http://localhost:8081/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete user');
+      }
+      
+      // Update local state
+      setUsers(users.filter(user => user.id !== userId));
+      toast.success("Đã xóa người dùng thành công");
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa người dùng. Vui lòng thử lại sau.');
     }
   };
 
-  const openRoleDialog = (user: (typeof usersData)[0]) => {
+  const handleChangeRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormLoading(true);
+    
+    if (selectedUser) {
+      try {
+        const form = e.target as HTMLFormElement;
+        const newRole = form.querySelector('#new-role') as HTMLSelectElement;
+        
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Bạn cần đăng nhập lại");
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8081/api/admin/users/${selectedUser.id}/role`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ role: newRole.value })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to change role');
+        }
+        
+        // Update local state
+        setUsers(users.map(user => 
+          user.id === selectedUser.id 
+            ? { ...user, role: newRole.value } 
+            : user
+        ));
+        
+        toast.success(`Đã thay đổi vai trò của ${selectedUser.name} thành công`);
+        setIsRoleDialogOpen(false);
+        setSelectedUser(null);
+      } catch (error) {
+        console.error('Error changing role:', error);
+        toast.error(error instanceof Error ? error.message : 'Không thể thay đổi vai trò. Vui lòng thử lại sau.');
+      } finally {
+        setFormLoading(false);
+      }
+    }
+  };
+
+  const openRoleDialog = (user: User) => {
     setSelectedUser(user);
     setIsRoleDialogOpen(true);
   };
 
   const getRoleBadge = (role: string) => {
-    return role === 'admin' 
-      ? <Badge className="bg-purple-600">Admin</Badge>
-      : <Badge className="bg-blue-500">Người dùng</Badge>;
+    switch(role) {
+      case 'ROLE_ADMIN':
+        return <Badge className="bg-purple-600">Admin</Badge>;
+      case 'ROLE_STAFF':
+        return <Badge className="bg-orange-500">Nhân viên</Badge>;
+      default:
+        return <Badge className="bg-blue-500">Người dùng</Badge>;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -155,6 +256,14 @@ const AdminUsers = () => {
       ? <Badge className="bg-green-500">Hoạt động</Badge>
       : <Badge className="bg-gray-500">Không hoạt động</Badge>;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -178,34 +287,45 @@ const AdminUsers = () => {
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Tên đầy đủ</Label>
-                  <Input id="name" placeholder="Nguyễn Văn A" required />
+                  <Input id="name" name="name" placeholder="Nguyễn Văn A" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="example@email.com" required />
+                  <Input id="email" name="email" type="email" placeholder="example@email.com" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Số điện thoại</Label>
-                  <Input id="phone" placeholder="0901234567" required />
+                  <Input id="phone" name="phone" placeholder="0901234567" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Mật khẩu</Label>
-                  <Input id="password" type="password" required />
+                  <Input id="password" name="password" type="password" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Vai trò</Label>
                   <select 
                     id="role" 
+                    name="role"
                     className="w-full p-2 border rounded-md"
-                    defaultValue="user"
+                    defaultValue="ROLE_USER"
                   >
-                    <option value="user">Người dùng</option>
-                    <option value="admin">Admin</option>
+                    <option value="ROLE_USER">Người dùng</option>
+                    <option value="ROLE_ADMIN">Admin</option>
+                    <option value="ROLE_STAFF">Nhân viên</option>
                   </select>
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Tạo người dùng</Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Tạo người dùng'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -315,13 +435,23 @@ const AdminUsers = () => {
                   className="w-full p-2 border rounded-md"
                   defaultValue={selectedUser?.role}
                 >
-                  <option value="user">Người dùng</option>
-                  <option value="admin">Admin</option>
+                  <option value="ROLE_USER">Người dùng</option>
+                  <option value="ROLE_ADMIN">Admin</option>
+                  <option value="ROLE_STAFF">Nhân viên</option>
                 </select>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Lưu thay đổi</Button>
+              <Button type="submit" disabled={formLoading}>
+                {formLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Lưu thay đổi'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

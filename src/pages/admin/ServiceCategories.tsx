@@ -1,9 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -54,53 +54,55 @@ const categoryFormSchema = z.object({
   icon: z.string().optional(),
 });
 
-// Example categories
-const initialCategories = [
-  {
-    id: "1",
-    name: "Chăm sóc da",
-    description: "Các dịch vụ chăm sóc da cơ bản và chuyên sâu",
-    icon: "Sparkles",
-    servicesCount: 5
-  },
-  {
-    id: "2",
-    name: "Điều trị",
-    description: "Các dịch vụ điều trị da chuyên sâu",
-    icon: "Syringe",
-    servicesCount: 3
-  },
-  {
-    id: "3",
-    name: "Trẻ hóa",
-    description: "Các dịch vụ trẻ hóa da và chống lão hóa",
-    icon: "Clock",
-    servicesCount: 2
-  },
-  {
-    id: "4",
-    name: "Massage",
-    description: "Các dịch vụ massage mặt và cơ thể",
-    icon: "Massage",
-    servicesCount: 4
-  },
-  {
-    id: "5",
-    name: "Làm đẹp",
-    description: "Các dịch vụ làm đẹp khác",
-    icon: "Gem",
-    servicesCount: 1
-  }
-];
-
-type Category = typeof initialCategories[0];
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  servicesCount: number;
+}
 
 const ServiceCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
+
+      const response = await fetch('http://localhost:8081/api/admin/service-categories', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Không thể tải danh mục. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Add category form
   const addForm = useForm<z.infer<typeof categoryFormSchema>>({
@@ -122,40 +124,88 @@ const ServiceCategories = () => {
     },
   });
 
-  const handleAddCategory = (values: z.infer<typeof categoryFormSchema>) => {
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: values.name,
-      description: values.description || "",
-      icon: values.icon || "Folder",
-      servicesCount: 0
-    };
+  const handleAddCategory = async (values: z.infer<typeof categoryFormSchema>) => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Bạn cần đăng nhập lại");
+        return;
+      }
 
-    setCategories([...categories, newCategory]);
-    toast.success("Danh mục dịch vụ mới đã được thêm thành công!");
-    setIsAddDialogOpen(false);
-    addForm.reset();
-  };
-
-  const handleEditCategory = (values: z.infer<typeof categoryFormSchema>) => {
-    if (currentCategory) {
-      const updatedCategories = categories.map(category =>
-        category.id === currentCategory.id ? {
-          ...category,
-          name: values.name,
-          description: values.description || "",
-          icon: values.icon || category.icon,
-        } : category
-      );
-
-      setCategories(updatedCategories);
-      toast.success("Danh mục dịch vụ đã được cập nhật thành công!");
-      setIsEditDialogOpen(false);
-      setCurrentCategory(null);
+      const response = await fetch('http://localhost:8081/api/admin/service-categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(values)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add category');
+      }
+      
+      const newCategory = await response.json();
+      setCategories([...categories, newCategory]);
+      toast.success("Danh mục dịch vụ mới đã được thêm thành công!");
+      setIsAddDialogOpen(false);
+      addForm.reset();
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể thêm danh mục. Vui lòng thử lại sau.');
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  const handleDeleteCategory = () => {
+  const handleEditCategory = async (values: z.infer<typeof categoryFormSchema>) => {
+    setFormLoading(true);
+    if (currentCategory) {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Bạn cần đăng nhập lại");
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8081/api/admin/service-categories/${currentCategory.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(values)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update category');
+        }
+        
+        const updatedCategory = await response.json();
+        
+        setCategories(categories.map(category =>
+          category.id === currentCategory.id ? {
+            ...updatedCategory,
+            servicesCount: category.servicesCount // Preserve services count
+          } : category
+        ));
+        
+        toast.success("Danh mục dịch vụ đã được cập nhật thành công!");
+        setIsEditDialogOpen(false);
+        setCurrentCategory(null);
+      } catch (error) {
+        console.error('Error updating category:', error);
+        toast.error(error instanceof Error ? error.message : 'Không thể cập nhật danh mục. Vui lòng thử lại sau.');
+      } finally {
+        setFormLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteCategory = async () => {
     if (currentCategory) {
       if (currentCategory.servicesCount > 0) {
         toast.error(`Không thể xóa danh mục này vì có ${currentCategory.servicesCount} dịch vụ đang sử dụng!`);
@@ -163,10 +213,33 @@ const ServiceCategories = () => {
         return;
       }
       
-      setCategories(categories.filter(category => category.id !== currentCategory.id));
-      toast.success("Danh mục dịch vụ đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setCurrentCategory(null);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Bạn cần đăng nhập lại");
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8081/api/admin/service-categories/${currentCategory.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete category');
+        }
+        
+        setCategories(categories.filter(category => category.id !== currentCategory.id));
+        toast.success("Danh mục dịch vụ đã được xóa thành công!");
+        setIsDeleteDialogOpen(false);
+        setCurrentCategory(null);
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error(error instanceof Error ? error.message : 'Không thể xóa danh mục. Vui lòng thử lại sau.');
+      }
     }
   };
 
@@ -184,6 +257,14 @@ const ServiceCategories = () => {
     setCurrentCategory(category);
     setIsDeleteDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -210,37 +291,45 @@ const ServiceCategories = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell>
-                    <div className="max-w-[300px] truncate">
-                      {category.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>{category.icon}</TableCell>
-                  <TableCell>{category.servicesCount}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" /> Sửa
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => openDeleteDialog(category)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                      </Button>
-                    </div>
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell>
+                      <div className="max-w-[300px] truncate">
+                        {category.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>{category.icon}</TableCell>
+                    <TableCell>{category.servicesCount}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(category)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Sửa
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => openDeleteDialog(category)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Xóa
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10">
+                    Chưa có danh mục nào. Hãy tạo danh mục mới.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -301,7 +390,16 @@ const ServiceCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Thêm danh mục</Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Thêm danh mục'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -364,7 +462,16 @@ const ServiceCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Lưu thay đổi</Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Lưu thay đổi'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
