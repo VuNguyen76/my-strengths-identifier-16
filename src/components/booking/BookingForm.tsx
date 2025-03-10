@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -70,8 +69,10 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     
     if (user) {
       form.setValue("name", user.fullName || "");
-      // Check if user has phone property before accessing it
-      form.setValue("phone", user.phone || "");
+      // Safely access the phone property with type checking
+      if (user && typeof user === 'object' && 'phone' in user) {
+        form.setValue("phone", user.phone || "");
+      }
       form.setValue("email", user.email || "");
     }
   }, [form]);

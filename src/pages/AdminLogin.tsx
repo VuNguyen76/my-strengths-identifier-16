@@ -18,6 +18,9 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { toast } from "sonner";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ApiService from "@/services/api.service";
+import { ENDPOINTS } from "@/config/api";
+import AuthService from "@/services/auth.service";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -38,29 +41,47 @@ const AdminLogin = () => {
     },
   });
 
-  const onSubmit = (values: LoginValues) => {
+  const onSubmit = async (values: LoginValues) => {
     setIsLoading(true);
 
-    // Mock admin login simulation - Replace with actual API call in production
-    setTimeout(() => {
-      console.log("Admin login submitted:", values);
-      setIsLoading(false);
+    try {
+      // Use real API instead of mock data
+      const response = await ApiService.post(ENDPOINTS.AUTH.LOGIN, {
+        username: values.email,
+        password: values.password
+      }, { requiresAuth: false });
       
-      // Admin login credentials check
-      if (values.email === "admin@example.com" && values.password === "admin123") {
-        toast.success("Đăng nhập quản trị viên thành công!");
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("user", JSON.stringify({ email: values.email, role: "admin" }));
-        navigate("/admin");
-      } else if (values.email === "staff@example.com" && values.password === "staff123") {
-        toast.success("Đăng nhập nhân viên thành công!");
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("user", JSON.stringify({ email: values.email, role: "staff" }));
-        navigate("/dashboard");
-      } else {
-        toast.error("Email hoặc mật khẩu không đúng");
+      if (!response || !response.token) {
+        throw new Error("Đăng nhập thất bại");
       }
-    }, 1000);
+      
+      // Save auth data
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('refreshToken', response.refreshToken || '');
+      localStorage.setItem('user', JSON.stringify({
+        email: values.email,
+        role: response.role,
+        fullName: response.fullName,
+        username: response.username
+      }));
+      
+      toast.success("Đăng nhập thành công!");
+      
+      // Redirect based on role
+      if (response.role === "ROLE_ADMIN") {
+        navigate("/admin");
+      } else if (response.role === "ROLE_STAFF") {
+        navigate("/staff/dashboard");
+      } else {
+        toast.error("Bạn không có quyền truy cập trang quản trị");
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error((error as Error).message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

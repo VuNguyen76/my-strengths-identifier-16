@@ -50,10 +50,13 @@ const Dashboard = () => {
         }
         
         console.log("User data retrieved, redirecting based on role");
+        // Fix type issues by checking if userData has a role property
+        const userRole = userData && typeof userData === 'object' ? (userData as { role?: string }).role : undefined;
+        
         // Redirect based on role
-        if (userData.role === "ROLE_ADMIN") {
+        if (userRole === "ROLE_ADMIN") {
           navigate("/admin");
-        } else if (userData.role === "ROLE_STAFF") {
+        } else if (userRole === "ROLE_STAFF") {
           navigate("/staff/dashboard");
         } else {
           navigate("/dashboard");

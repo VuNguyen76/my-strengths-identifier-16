@@ -10,70 +10,82 @@ import {
   DollarSign, 
   Users, 
   Activity, 
-  ArrowUpRight, 
-  ArrowDownRight,
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import ApiService from "@/services/api.service";
+import { ENDPOINTS } from "@/config/api";
+import { useQuery } from "@tanstack/react-query";
+
+// Define types for dashboard data
+interface DashboardData {
+  totalUsers: number;
+  totalBookings: number;
+  totalRevenue: number;
+  completionRate: number;
+  recentActivity: Array<{
+    id: string;
+    action: string;
+    timestamp: string;
+    userName: string;
+    userAvatar?: string;
+  }>;
+  bookingsByDay: Array<{
+    date: string;
+    count: number;
+  }>;
+  revenueByMonth: Array<{
+    month: string;
+    revenue: number;
+  }>;
+}
 
 const AdminDashboard = () => {
-  const [dashboardData, setDashboardData] = useState({
-    totalUsers: 0,
-    totalBookings: 0,
-    totalRevenue: 0,
-    recentActivity: [],
-    bookingsByDay: [],
-    revenueByMonth: []
-  });
-  const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('week');
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [timeframe]);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Bạn cần đăng nhập lại");
-        return;
+  // Use React Query to fetch dashboard data
+  const { 
+    data: dashboardData, 
+    isLoading, 
+    isError, 
+    refetch 
+  } = useQuery({
+    queryKey: ['adminDashboard', timeframe],
+    queryFn: async () => {
+      try {
+        const response = await ApiService.get<DashboardData>(`${ENDPOINTS.DASHBOARD.ADMIN}?timeframe=${timeframe}`);
+        return response || {
+          totalUsers: 0,
+          totalBookings: 0,
+          totalRevenue: 0,
+          completionRate: 0,
+          recentActivity: [],
+          bookingsByDay: [],
+          revenueByMonth: []
+        };
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Return default data structure if API fails
+        return {
+          totalUsers: 0,
+          totalBookings: 0,
+          totalRevenue: 0,
+          completionRate: 0,
+          recentActivity: [],
+          bookingsByDay: [],
+          revenueByMonth: []
+        };
       }
-
-      const response = await fetch(`http://localhost:8081/api/admin/dashboard?timeframe=${timeframe}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-      
-      const data = await response.json();
-      setDashboardData(data);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error('Không thể tải dữ liệu. Vui lòng thử lại sau.');
-      
-      // Set default data for UI rendering
-      setDashboardData({
-        totalUsers: 0,
-        totalBookings: 0,
-        totalRevenue: 0,
-        recentActivity: [],
-        bookingsByDay: [],
-        revenueByMonth: []
-      });
-    } finally {
-      setLoading(false);
     }
+  });
+
+  // Handle timeframe change
+  const handleTimeframeChange = (newTimeframe: string) => {
+    setTimeframe(newTimeframe);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -81,12 +93,35 @@ const AdminDashboard = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-red-500 mb-4">
+          Không thể tải dữ liệu. Vui lòng thử lại sau.
+        </div>
+        <Button onClick={() => refetch()}>
+          Thử lại
+        </Button>
+      </div>
+    );
+  }
+
+  const data = dashboardData || {
+    totalUsers: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+    completionRate: 0,
+    recentActivity: [],
+    bookingsByDay: [],
+    revenueByMonth: []
+  };
+
   return (
     <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchDashboardData}>
+          <Button variant="outline" onClick={() => refetch()}>
             Làm mới
           </Button>
         </div>
@@ -108,9 +143,9 @@ const AdminDashboard = () => {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{dashboardData.totalUsers.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{data.totalUsers.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  +20.1% so với tháng trước
+                  {/* This would come from API in a real implementation */}
                 </p>
               </CardContent>
             </Card>
@@ -122,9 +157,9 @@ const AdminDashboard = () => {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{dashboardData.totalBookings.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{data.totalBookings.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  +10.5% so với tháng trước
+                  {/* This would come from API in a real implementation */}
                 </p>
               </CardContent>
             </Card>
@@ -137,10 +172,10 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dashboardData.totalRevenue)}
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +15.3% so với tháng trước
+                  {/* This would come from API in a real implementation */}
                 </p>
               </CardContent>
             </Card>
@@ -152,9 +187,9 @@ const AdminDashboard = () => {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">89.2%</div>
+                <div className="text-2xl font-bold">{data.completionRate ? `${data.completionRate}%` : '0%'}</div>
                 <p className="text-xs text-muted-foreground">
-                  +2.5% so với tháng trước
+                  {/* This would come from API in a real implementation */}
                 </p>
               </CardContent>
             </Card>
@@ -168,7 +203,7 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dashboardData.bookingsByDay}>
+                    <BarChart data={data.bookingsByDay}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
@@ -190,9 +225,9 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {dashboardData.recentActivity.length > 0 ? 
-                    dashboardData.recentActivity.slice(0, 5).map((activity: any, index: number) => (
-                      <div key={index} className="flex items-center">
+                  {data.recentActivity.length > 0 ? 
+                    data.recentActivity.slice(0, 5).map((activity, index) => (
+                      <div key={activity.id || index} className="flex items-center">
                         <Avatar className="h-9 w-9 mr-3">
                           <AvatarImage src={activity.userAvatar} alt={activity.userName} />
                           <AvatarFallback>
@@ -205,11 +240,6 @@ const AdminDashboard = () => {
                             {new Date(activity.timestamp).toLocaleString('vi-VN')}
                           </p>
                         </div>
-                        {activity.type === 'increase' ? (
-                          <ArrowUpRight className="ml-auto h-4 w-4 text-green-500" />
-                        ) : activity.type === 'decrease' ? (
-                          <ArrowDownRight className="ml-auto h-4 w-4 text-red-500" />
-                        ) : null}
                       </div>
                     )) : (
                       <p className="text-center text-muted-foreground">Chưa có hoạt động nào gần đây</p>
@@ -235,7 +265,7 @@ const AdminDashboard = () => {
                   <select 
                     className="p-2 border rounded-md"
                     value={timeframe}
-                    onChange={(e) => setTimeframe(e.target.value)}
+                    onChange={(e) => handleTimeframeChange(e.target.value)}
                   >
                     <option value="week">7 ngày qua</option>
                     <option value="month">30 ngày qua</option>
@@ -246,7 +276,7 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dashboardData.revenueByMonth}>
+                    <BarChart data={data.revenueByMonth}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />

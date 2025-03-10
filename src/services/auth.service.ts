@@ -1,4 +1,3 @@
-
 import { API_URL, ENDPOINTS, getAuthHeaders } from "@/config/api";
 import { jwtDecode } from "jwt-decode";
 
@@ -16,6 +15,7 @@ export interface User {
   fullName?: string;
   role?: string;
   profileImage?: string;
+  phone?: string;
 }
 
 class AuthService {
@@ -111,7 +111,8 @@ class AuthService {
       email: data.email,
       fullName: data.fullName, 
       role: data.role,
-      profileImage: data.profileImage
+      profileImage: data.profileImage,
+      phone: data.phone
     }));
   }
 
