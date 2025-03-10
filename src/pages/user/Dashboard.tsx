@@ -13,7 +13,8 @@ const UserDashboard = () => {
     pendingBookings: 0,
     completedServices: 0,
     upcomingBooking: null,
-    recentActivity: []
+    recentActivity: [],
+    totalPayments: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +53,8 @@ const UserDashboard = () => {
         pendingBookings: 0,
         completedServices: 0,
         upcomingBooking: null,
-        recentActivity: []
+        recentActivity: [],
+        totalPayments: 0
       });
     } finally {
       setLoading(false);
@@ -123,8 +125,8 @@ const UserDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {userData.payments ? 
-                  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(userData.payments) :
+                  {userData.totalPayments ? 
+                  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(userData.totalPayments) :
                   "0 ₫"}
                 </div>
                 <p className="text-xs text-muted-foreground">

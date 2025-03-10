@@ -1,11 +1,7 @@
 
 import { useState } from "react";
-import { format, startOfToday } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Loader2, Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,19 +11,10 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { CustomerForm } from "./forms/CustomerForm";
+import { BookingDetails } from "./forms/BookingDetails";
+import { useCreateBooking } from "@/hooks/useBookingMutations";
 
 interface NewBookingProps {
   onBookingCreated: () => void;
@@ -35,7 +22,6 @@ interface NewBookingProps {
 
 export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(startOfToday());
   const queryClient = useQueryClient();
   
   // State for new booking form
@@ -45,68 +31,18 @@ export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
     phone: "",
     serviceId: "",
     specialistId: "",
-    date: startOfToday(),
+    date: new Date(),
     time: "09:00",
     notes: ""
   });
 
-  // Fetch services
-  const { data: services, isLoading: isLoadingServices } = useQuery({
-    queryKey: ['services'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/services');
-      if (!response.ok) {
-        throw new Error('Không thể tải dịch vụ');
-      }
-      return response.json();
-    }
-  });
-
-  // Fetch specialists
-  const { data: specialists, isLoading: isLoadingSpecialists } = useQuery({
-    queryKey: ['specialists'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:8081/api/specialists');
-      if (!response.ok) {
-        throw new Error('Không thể tải chuyên viên');
-      }
-      return response.json();
-    }
-  });
-
-  // Create booking mutation
-  const createBookingMutation = useMutation({
-    mutationFn: async (bookingData: any) => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Không tìm thấy token đăng nhập");
-      }
-      
-      const response = await fetch('http://localhost:8081/api/admin/bookings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(bookingData)
-      });
-      
-      if (!response.ok) {
-        throw new Error("Không thể tạo lịch đặt");
-      }
-      
-      return response.json();
-    },
+  const createBookingMutation = useCreateBooking({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminBookings'] });
       toast.success("Đặt lịch mới đã được tạo!");
       setIsDialogOpen(false);
       resetForm();
       onBookingCreated();
-    },
-    onError: (error) => {
-      toast.error(`Lỗi khi tạo lịch đặt: ${error.message}`);
     }
   });
 
@@ -119,8 +55,7 @@ export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
     setNewBooking(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
+  const handleDateChange = (selectedDate: Date | undefined) => {
     // Update new booking with selected date
     if (selectedDate) {
       setNewBooking(prev => ({ ...prev, date: selectedDate }));
@@ -134,11 +69,10 @@ export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
       phone: "",
       serviceId: "",
       specialistId: "",
-      date: startOfToday(),
+      date: new Date(),
       time: "09:00",
       notes: ""
     });
-    setDate(startOfToday());
   };
 
   const createBooking = () => {
@@ -149,7 +83,7 @@ export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
       phone: newBooking.phone,
       serviceId: newBooking.serviceId,
       specialistId: newBooking.specialistId,
-      bookingDate: format(newBooking.date, 'yyyy-MM-dd'),
+      bookingDate: newBooking.date.toISOString().split('T')[0],
       bookingTime: newBooking.time,
       notes: newBooking.notes
     };
@@ -170,135 +104,16 @@ export const NewBookingDialog = ({ onBookingCreated }: NewBookingProps) => {
           <DialogTitle>Đặt lịch mới</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="customerName">Tên khách hàng</Label>
-              <Input
-                id="customerName"
-                name="customerName"
-                value={newBooking.customerName}
-                onChange={handleInputChange}
-                placeholder="Nguyễn Văn A"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={newBooking.email}
-                onChange={handleInputChange}
-                placeholder="example@gmail.com"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={newBooking.phone}
-                onChange={handleInputChange}
-                placeholder="0901234567"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="serviceId">Dịch vụ</Label>
-              <Select
-                value={newBooking.serviceId}
-                onValueChange={(value) => handleSelectChange("serviceId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn dịch vụ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services && services.map((service: any) => (
-                    <SelectItem key={service.id} value={service.id.toString()}>
-                      {service.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="specialistId">Chuyên viên</Label>
-              <Select
-                value={newBooking.specialistId}
-                onValueChange={(value) => handleSelectChange("specialistId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn chuyên viên" />
-                </SelectTrigger>
-                <SelectContent>
-                  {specialists && specialists.map((specialist: any) => (
-                    <SelectItem key={specialist.id} value={specialist.id.toString()}>
-                      {specialist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Giờ</Label>
-              <Select
-                value={newBooking.time}
-                onValueChange={(value) => handleSelectChange("time", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn giờ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 10 }).map((_, i) => {
-                    const hour = 8 + i;
-                    const time = `${hour.toString().padStart(2, '0')}:00`;
-                    return (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Ngày</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Chọn ngày</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={handleDateSelect}
-                  disabled={(date) => date < startOfToday()}
-                  initialFocus
-                  className="rounded-md border"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
-            <Input
-              id="notes"
-              name="notes"
-              value={newBooking.notes}
-              onChange={handleInputChange}
-              placeholder="Ghi chú về đặt lịch"
-            />
-          </div>
+          <CustomerForm 
+            booking={newBooking} 
+            handleInputChange={handleInputChange} 
+          />
+          <BookingDetails 
+            booking={newBooking}
+            handleSelectChange={handleSelectChange}
+            handleDateChange={handleDateChange}
+            handleInputChange={handleInputChange}
+          />
         </div>
         <DialogFooter>
           <Button 

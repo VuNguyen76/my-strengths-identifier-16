@@ -1,58 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
-// Service category schema
-const categoryFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Tên danh mục phải có ít nhất 2 ký tự",
-  }),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-});
+import { CategoryTable } from "@/components/admin/services/CategoryTable";
+import { AddCategoryDialog } from "@/components/admin/services/AddCategoryDialog";
+import { EditCategoryDialog } from "@/components/admin/services/EditCategoryDialog";
+import { DeleteCategoryDialog } from "@/components/admin/services/DeleteCategoryDialog";
 
 interface Category {
   id: string;
@@ -104,27 +59,7 @@ const ServiceCategories = () => {
     }
   };
 
-  // Add category form
-  const addForm = useForm<z.infer<typeof categoryFormSchema>>({
-    resolver: zodResolver(categoryFormSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      icon: "",
-    },
-  });
-
-  // Edit category form
-  const editForm = useForm<z.infer<typeof categoryFormSchema>>({
-    resolver: zodResolver(categoryFormSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      icon: "",
-    },
-  });
-
-  const handleAddCategory = async (values: z.infer<typeof categoryFormSchema>) => {
+  const handleAddCategory = async (values: any) => {
     setFormLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -151,7 +86,6 @@ const ServiceCategories = () => {
       setCategories([...categories, newCategory]);
       toast.success("Danh mục dịch vụ mới đã được thêm thành công!");
       setIsAddDialogOpen(false);
-      addForm.reset();
     } catch (error) {
       console.error('Error adding category:', error);
       toast.error(error instanceof Error ? error.message : 'Không thể thêm danh mục. Vui lòng thử lại sau.');
@@ -160,7 +94,7 @@ const ServiceCategories = () => {
     }
   };
 
-  const handleEditCategory = async (values: z.infer<typeof categoryFormSchema>) => {
+  const handleEditCategory = async (values: any) => {
     setFormLoading(true);
     if (currentCategory) {
       try {
@@ -245,11 +179,6 @@ const ServiceCategories = () => {
 
   const openEditDialog = (category: Category) => {
     setCurrentCategory(category);
-    editForm.reset({
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-    });
     setIsEditDialogOpen(true);
   };
 
@@ -280,228 +209,35 @@ const ServiceCategories = () => {
           <CardTitle>Danh sách danh mục dịch vụ</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tên danh mục</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead>Icon</TableHead>
-                <TableHead>Số dịch vụ</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.length > 0 ? (
-                categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>
-                      <div className="max-w-[300px] truncate">
-                        {category.description}
-                      </div>
-                    </TableCell>
-                    <TableCell>{category.icon}</TableCell>
-                    <TableCell>{category.servicesCount}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(category)}
-                        >
-                          <Edit className="h-4 w-4 mr-1" /> Sửa
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => openDeleteDialog(category)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10">
-                    Chưa có danh mục nào. Hãy tạo danh mục mới.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <CategoryTable 
+            categories={categories}
+            onEdit={openEditDialog}
+            onDelete={openDeleteDialog}
+          />
         </CardContent>
       </Card>
 
-      {/* Add Category Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Thêm danh mục dịch vụ mới</DialogTitle>
-            <DialogDescription>
-              Tạo danh mục dịch vụ mới để phân loại các dịch vụ.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...addForm}>
-            <form onSubmit={addForm.handleSubmit(handleAddCategory)} className="space-y-4">
-              <FormField
-                control={addForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên danh mục</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nhập tên danh mục" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={addForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mô tả</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Mô tả danh mục này" 
-                        className="resize-none" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={addForm.control}
-                name="icon"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Icon (tùy chọn)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Tên icon" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'Thêm danh mục'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <AddCategoryDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAddCategory={handleAddCategory}
+        isLoading={formLoading}
+      />
 
-      {/* Edit Category Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa danh mục dịch vụ</DialogTitle>
-            <DialogDescription>
-              Chỉnh sửa thông tin của danh mục dịch vụ hiện tại.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditCategory)} className="space-y-4">
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên danh mục</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nhập tên danh mục" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mô tả</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Mô tả danh mục này" 
-                        className="resize-none" 
-                        {...field} 
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="icon"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Icon (tùy chọn)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Tên icon" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'Lưu thay đổi'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <EditCategoryDialog 
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        category={currentCategory}
+        onEditCategory={handleEditCategory}
+        isLoading={formLoading}
+      />
 
-      {/* Delete Category Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa danh mục</AlertDialogTitle>
-            <AlertDialogDescription>
-              {currentCategory?.servicesCount && currentCategory.servicesCount > 0 ? 
-                `Không thể xóa danh mục "${currentCategory.name}" vì có ${currentCategory.servicesCount} dịch vụ đang sử dụng!` : 
-                `Bạn có chắc chắn muốn xóa danh mục "${currentCategory?.name}"? Hành động này không thể hoàn tác.`
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteCategory} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={currentCategory?.servicesCount && currentCategory.servicesCount > 0}
-            >
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteCategoryDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        category={currentCategory}
+        onDeleteCategory={handleDeleteCategory}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ import { CustomerInfo } from "./CustomerInfo";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface Service {
   id: string;
@@ -181,7 +182,36 @@ const BookingForm = ({ onFormUpdate, onBookingComplete }: BookingFormProps) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <ServiceMultiSelect form={form} services={services || []} />
-        <SpecialistSelect form={form} specialists={specialists || []} />
+        
+        <FormField
+          control={form.control}
+          name="specialist"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Chuyên viên</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                value={field.value}
+                disabled={!form.watch("services")?.length || isLoadingSpecialists}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn chuyên viên" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {specialists && specialists.map((specialist: any) => (
+                    <SelectItem key={specialist.id} value={specialist.id}>
+                      {specialist.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
         <DateTimeSelect form={form} />
         <CustomerInfo form={form} />
         <Button type="submit" className="w-full">

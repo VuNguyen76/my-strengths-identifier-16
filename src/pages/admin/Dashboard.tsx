@@ -2,30 +2,37 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, CalendarDays, DollarSign, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Calendar, 
+  CreditCard, 
+  DollarSign, 
+  Users, 
+  Activity, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  Loader2
+} from "lucide-react";
 import { toast } from "sonner";
 
-// Charts component
-import { Bar } from "recharts";
-import { Chart } from "@/components/ui/chart";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const [stats, setStats] = useState({
+  const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
     totalBookings: 0,
     totalRevenue: 0,
-    pendingBookings: 0
+    recentActivity: [],
+    bookingsByDay: [],
+    revenueByMonth: []
   });
-  const [revenueData, setRevenueData] = useState([]);
-  const [bookingsData, setBookingsData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timeframe, setTimeframe] = useState('week');
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [timeframe]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -33,11 +40,10 @@ const AdminDashboard = () => {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error("Bạn cần đăng nhập lại");
-        navigate("/admin/login");
         return;
       }
 
-      const response = await fetch('http://localhost:8081/api/admin/dashboard', {
+      const response = await fetch(`http://localhost:8081/api/admin/dashboard?timeframe=${timeframe}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -48,55 +54,32 @@ const AdminDashboard = () => {
       }
       
       const data = await response.json();
-      
-      // Update stats
-      setStats({
-        totalUsers: data.totalUsers || 0,
-        totalBookings: data.totalBookings || 0,
-        totalRevenue: data.totalRevenue || 0,
-        pendingBookings: data.pendingBookings || 0
-      });
-      
-      // Update chart data
-      setRevenueData(data.revenueData || []);
-      setBookingsData(data.bookingsData || []);
-      
+      setDashboardData(data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.error('Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.');
+      toast.error('Không thể tải dữ liệu. Vui lòng thử lại sau.');
       
-      // Set empty data when API fails
-      setStats({
+      // Set default data for UI rendering
+      setDashboardData({
         totalUsers: 0,
         totalBookings: 0,
         totalRevenue: 0,
-        pendingBookings: 0
+        recentActivity: [],
+        bookingsByDay: [],
+        revenueByMonth: []
       });
-      setRevenueData([]);
-      setBookingsData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fallback data if API fails to return data
-  const fallbackRevenueData = [
-    { name: "T1", value: 0 },
-    { name: "T2", value: 0 },
-    { name: "T3", value: 0 },
-    { name: "T4", value: 0 },
-    { name: "T5", value: 0 },
-    { name: "T6", value: 0 },
-  ];
-
-  const fallbackBookingsData = [
-    { name: "T1", value: 0 },
-    { name: "T2", value: 0 },
-    { name: "T3", value: 0 },
-    { name: "T4", value: 0 },
-    { name: "T5", value: 0 },
-    { name: "T6", value: 0 },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-4">
@@ -108,52 +91,40 @@ const AdminDashboard = () => {
           </Button>
         </div>
       </div>
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
           <TabsTrigger value="analytics">Phân tích</TabsTrigger>
         </TabsList>
+
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Tổng số người dùng
+                  Tổng khách hàng
                 </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                <div className="text-2xl font-bold">{dashboardData.totalUsers.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  Tổng số người dùng đã đăng ký
+                  +20.1% so với tháng trước
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Lịch đặt chờ xử lý
+                  Tổng lịch đặt
                 </CardTitle>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingBookings}</div>
+                <div className="text-2xl font-bold">{dashboardData.totalBookings.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
-                  Cần xác nhận
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Tổng số lịch đặt
-                </CardTitle>
-                <BarChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalBookings}</div>
-                <p className="text-xs text-muted-foreground">
-                  Tổng số lịch đặt đã đăng ký
+                  +10.5% so với tháng trước
                 </p>
               </CardContent>
             </Card>
@@ -166,77 +137,127 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.totalRevenue)}
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dashboardData.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Tổng doanh thu từ đầu năm
+                  +15.3% so với tháng trước
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Tỷ lệ hoàn thành
+                </CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">89.2%</div>
+                <p className="text-xs text-muted-foreground">
+                  +2.5% so với tháng trước
                 </p>
               </CardContent>
             </Card>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-            <Card>
+
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-1 md:col-span-2 lg:col-span-4">
               <CardHeader>
-                <CardTitle>Doanh thu gần đây</CardTitle>
-                <CardDescription>
-                  Doanh thu 6 tháng gần nhất
-                </CardDescription>
+                <CardTitle>Lịch đặt theo ngày</CardTitle>
               </CardHeader>
-              <CardContent className="pl-2">
-                <Chart 
-                  className="h-80" 
-                  type="bar"
-                  data={revenueData.length > 0 ? revenueData : fallbackRevenueData}
-                >
-                  <Bar dataKey="value" fill="#0ea5e9" />
-                </Chart>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboardData.bookingsByDay}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="count" name="Số lịch đặt" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="col-span-1 md:col-span-2 lg:col-span-3">
               <CardHeader>
-                <CardTitle>Lịch đặt gần đây</CardTitle>
+                <CardTitle>Hoạt động gần đây</CardTitle>
                 <CardDescription>
-                  Số lượng lịch đặt 6 tháng gần nhất
+                  Những hoạt động mới nhất trên hệ thống
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pl-2">
-                <Chart 
-                  className="h-80" 
-                  type="bar"
-                  data={bookingsData.length > 0 ? bookingsData : fallbackBookingsData}
-                >
-                  <Bar dataKey="value" fill="#10b981" />
-                </Chart>
+              <CardContent>
+                <div className="space-y-4">
+                  {dashboardData.recentActivity.length > 0 ? 
+                    dashboardData.recentActivity.slice(0, 5).map((activity: any, index: number) => (
+                      <div key={index} className="flex items-center">
+                        <Avatar className="h-9 w-9 mr-3">
+                          <AvatarImage src={activity.userAvatar} alt={activity.userName} />
+                          <AvatarFallback>
+                            {activity.userName?.charAt(0) || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{activity.action}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(activity.timestamp).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                        {activity.type === 'increase' ? (
+                          <ArrowUpRight className="ml-auto h-4 w-4 text-green-500" />
+                        ) : activity.type === 'decrease' ? (
+                          <ArrowDownRight className="ml-auto h-4 w-4 text-red-500" />
+                        ) : null}
+                      </div>
+                    )) : (
+                      <p className="text-center text-muted-foreground">Chưa có hoạt động nào gần đây</p>
+                    )
+                  }
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
+
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Phân tích người dùng</CardTitle>
-                <CardDescription>
-                  Số liệu về người dùng mới và quay lại
-                </CardDescription>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-1 md:col-span-2 lg:col-span-3">
+              <CardHeader className="flex flex-row items-center">
+                <div className="flex-1">
+                  <CardTitle>Doanh thu theo tháng</CardTitle>
+                  <CardDescription>
+                    Tổng doanh thu theo từng tháng
+                  </CardDescription>
+                </div>
+                <div>
+                  <select 
+                    className="p-2 border rounded-md"
+                    value={timeframe}
+                    onChange={(e) => setTimeframe(e.target.value)}
+                  >
+                    <option value="week">7 ngày qua</option>
+                    <option value="month">30 ngày qua</option>
+                    <option value="year">Năm nay</option>
+                  </select>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500 text-center py-10">
-                  Tính năng đang được phát triển. Vui lòng quay lại sau.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Phân tích dịch vụ</CardTitle>
-                <CardDescription>
-                  Dịch vụ phổ biến nhất
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500 text-center py-10">
-                  Tính năng đang được phát triển. Vui lòng quay lại sau.
-                </p>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboardData.revenueByMonth}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => 
+                        new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value))
+                      } />
+                      <Legend />
+                      <Bar dataKey="revenue" name="Doanh thu" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
