@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ENDPOINTS } from "@/config/api";
 import ApiService from "@/services/api.service";
 import { format, subDays } from "date-fns";
+import { Report, RevenueReport, BookingsReport } from "@/types/report";
 
 interface DateRange {
   startDate: string;
@@ -52,21 +53,21 @@ export const useReports = (timePeriod: string = 'month') => {
     return `${ENDPOINTS.REPORTS.BOOKINGS}?startDate=${startDate}&endDate=${endDate}`;
   };
   
-  const reportQuery = useQuery({
+  const reportQuery = useQuery<Report>({
     queryKey: ['reports', timePeriod, startDate, endDate],
     queryFn: async () => {
       return ApiService.get(getReportUrl());
     }
   });
   
-  const revenueQuery = useQuery({
+  const revenueQuery = useQuery<RevenueReport>({
     queryKey: ['revenue-reports', startDate, endDate],
     queryFn: async () => {
       return ApiService.get(getRevenueReportUrl());
     }
   });
   
-  const bookingsQuery = useQuery({
+  const bookingsQuery = useQuery<BookingsReport>({
     queryKey: ['bookings-reports', startDate, endDate],
     queryFn: async () => {
       return ApiService.get(getBookingsReportUrl());

@@ -1,6 +1,4 @@
-
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { 
   Card, 
   CardContent, 
@@ -16,64 +14,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { subDays, format } from 'date-fns';
-import { ENDPOINTS } from '@/config/api';
-import ApiService from '@/services/api.service';
 import { Loader } from 'lucide-react';
+import { useReports } from '@/hooks/useReports';
+import type { Report } from '@/types/report';
 
 // Colors for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Reports: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState('month');
+  const { reportData, isLoadingReport } = useReports(timePeriod);
   
-  // Calculate date range based on selected time period
-  const getDateRange = () => {
-    const endDate = new Date();
-    let startDate;
-    
-    switch(timePeriod) {
-      case 'week':
-        startDate = subDays(endDate, 7);
-        break;
-      case 'month':
-        startDate = subDays(endDate, 30);
-        break;
-      case 'quarter':
-        startDate = subDays(endDate, 90);
-        break;
-      case 'year':
-        startDate = subDays(endDate, 365);
-        break;
-      default:
-        startDate = subDays(endDate, 30);
-    }
-    
-    return {
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd')
-    };
-  };
-  
-  const { startDate, endDate } = getDateRange();
-  
-  // Fetch report data
-  const { data: reportData, isLoading } = useQuery({
-    queryKey: ['reports', timePeriod, startDate, endDate],
-    queryFn: async () => {
-      return ApiService.get(
-        `${ENDPOINTS.REPORTS.ALL}?period=${timePeriod}&startDate=${startDate}&endDate=${endDate}`
-      );
-    }
-  });
-  
-  if (isLoading) {
+  if (isLoadingReport) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  const data = reportData as Report;
   
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -104,7 +64,7 @@ const Reports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {reportData?.totalRevenue?.toLocaleString('vi-VN')} VND
+              {data?.totalRevenue?.toLocaleString('vi-VN')} VND
             </p>
           </CardContent>
         </Card>
@@ -115,7 +75,7 @@ const Reports: React.FC = () => {
             <CardDescription>Tổng số lượt đặt lịch</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{reportData?.totalBookings}</p>
+            <p className="text-2xl font-bold">{data?.totalBookings}</p>
           </CardContent>
         </Card>
         
@@ -125,7 +85,7 @@ const Reports: React.FC = () => {
             <CardDescription>Số lượt đặt lịch đã hoàn thành</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{reportData?.completedBookings}</p>
+            <p className="text-2xl font-bold">{data?.completedBookings}</p>
           </CardContent>
         </Card>
         
@@ -135,7 +95,7 @@ const Reports: React.FC = () => {
             <CardDescription>Tỷ lệ hoàn thành lịch hẹn</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{reportData?.completionRate?.toFixed(1)}%</p>
+            <p className="text-2xl font-bold">{data?.completionRate?.toFixed(1)}%</p>
           </CardContent>
         </Card>
       </div>
@@ -152,7 +112,7 @@ const Reports: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={reportData?.revenueByService}
+                  data={data?.revenueByService}
                   cx="50%"
                   cy="50%"
                   labelLine={true}
@@ -162,7 +122,7 @@ const Reports: React.FC = () => {
                   nameKey="name"
                   label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {reportData?.revenueByService?.map((entry, index) => (
+                  {data?.revenueByService?.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -181,14 +141,14 @@ const Reports: React.FC = () => {
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={reportData?.bookingsByStatus}
+                data={data?.bookingsByStatus}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="value" fill="#8884d8">
-                  {reportData?.bookingsByStatus?.map((entry, index) => (
+                  {data?.bookingsByStatus?.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
@@ -206,7 +166,7 @@ const Reports: React.FC = () => {
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={reportData?.dailyRevenue}
+                data={data?.dailyRevenue}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <XAxis dataKey="date" />
@@ -228,7 +188,7 @@ const Reports: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={reportData?.customerRetentionRate}
+                  data={data?.customerRetentionRate}
                   cx="50%"
                   cy="50%"
                   labelLine={true}
@@ -238,7 +198,7 @@ const Reports: React.FC = () => {
                   nameKey="name"
                   label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {reportData?.customerRetentionRate?.map((entry, index) => (
+                  {data?.customerRetentionRate?.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
