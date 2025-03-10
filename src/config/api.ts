@@ -15,16 +15,22 @@ export const ENDPOINTS = {
     ALL: '/services',
     FEATURED: '/services/featured',
     CATEGORIES: '/services/categories',
+    ADMIN: {
+      ALL: '/admin/services',
+      CATEGORIES: '/admin/services/categories',
+    }
   },
   // Specialist endpoints
   SPECIALISTS: {
     ALL: '/specialists',
     FEATURED: '/specialists/featured',
     SCHEDULE: '/specialists/schedule',
+    ADMIN: '/admin/specialists',
   },
   // Booking endpoints
   BOOKINGS: {
     USER: '/bookings',
+    GUEST: '/bookings/guest',
     ADMIN: '/admin/bookings',
     CANCEL: (id: string) => `/admin/bookings/${id}/cancel`,
     STATUS: (id: string) => `/admin/bookings/${id}/status`,
@@ -34,6 +40,10 @@ export const ENDPOINTS = {
     ALL: '/blogs',
     FEATURED: '/blogs/featured',
     CATEGORIES: '/blogs/categories',
+    ADMIN: {
+      ALL: '/admin/blogs',
+      CATEGORIES: '/admin/blogs/categories',
+    }
   },
   // Dashboard endpoints
   DASHBOARD: {
