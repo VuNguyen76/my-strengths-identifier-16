@@ -1,0 +1,343 @@
+
+# Ý tưởng phát triển Backend bằng Java Spring Boot cho ứng dụng Spa
+
+## Cấu trúc dự án
+```
+spa-backend/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── spa/
+│   │   │           ├── config/
+│   │   │           ├── controller/
+│   │   │           ├── dto/
+│   │   │           ├── exception/
+│   │   │           ├── model/
+│   │   │           ├── repository/
+│   │   │           ├── security/
+│   │   │           ├── service/
+│   │   │           └── util/
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       ├── application-dev.properties
+│   │       └── application-prod.properties
+│   └── test/
+└── pom.xml
+```
+
+## Các dependencies cần thiết
+- Spring Boot Starter Web
+- Spring Boot Starter Data JPA
+- Spring Boot Starter Security
+- Spring Boot Starter Validation
+- Spring Boot Starter Mail
+- MySQL Connector
+- Lombok
+- JWT (JSON Web Token)
+- ModelMapper
+- SpringDoc OpenAPI (Swagger)
+- Apache POI (Excel export)
+- Spring Boot DevTools
+
+## Mô hình cơ sở dữ liệu
+
+### Cấu trúc bảng
+
+1. **User**
+   - id (PK)
+   - username
+   - password (đã mã hóa)
+   - email
+   - fullName
+   - phone
+   - address
+   - role (ROLE_ADMIN, ROLE_STAFF, ROLE_CUSTOMER)
+   - profileImage
+   - createdAt
+   - updatedAt
+   - active
+
+2. **Specialist**
+   - id (PK)
+   - userId (FK -> User)
+   - role (vai trò chuyên môn)
+   - experience
+   - bio
+   - specialties
+   - rating
+   - availability
+
+3. **Service**
+   - id (PK)
+   - name
+   - description
+   - price
+   - duration (phút)
+   - categoryId (FK -> ServiceCategory)
+   - image
+   - active
+
+4. **ServiceCategory**
+   - id (PK)
+   - name
+   - description
+   - image
+
+5. **Booking**
+   - id (PK)
+   - customerId (FK -> User)
+   - specialistId (FK -> Specialist)
+   - serviceId (FK -> Service)
+   - bookingDate
+   - bookingTime
+   - status (PENDING, CONFIRMED, COMPLETED, CANCELLED)
+   - note
+   - createdAt
+   - updatedAt
+
+6. **Transaction**
+   - id (PK)
+   - bookingId (FK -> Booking)
+   - amount
+   - paymentMethod
+   - status (PENDING, COMPLETED, FAILED, REFUNDED)
+   - transactionDate
+   - referenceNumber
+   - note
+
+7. **Schedule**
+   - id (PK)
+   - specialistId (FK -> Specialist)
+   - date
+   - timeSlots (JSON or separate related table)
+   - status (AVAILABLE, BOOKED, OFF)
+
+8. **Blog**
+   - id (PK)
+   - title
+   - content
+   - authorId (FK -> User)
+   - categoryId (FK -> BlogCategory)
+   - image
+   - createdAt
+   - updatedAt
+   - publishedAt
+   - status (DRAFT, PUBLISHED)
+
+9. **BlogCategory**
+   - id (PK)
+   - name
+   - description
+
+10. **Feedback**
+   - id (PK)
+   - userId (FK -> User)
+   - bookingId (FK -> Booking)
+   - rating
+   - comment
+   - createdAt
+   - response
+   - responseDate
+
+11. **Notification**
+   - id (PK)
+   - userId (FK -> User)
+   - title
+   - message
+   - isRead
+   - type
+   - createdAt
+
+## API Endpoints
+
+### Xác thực & Phân quyền
+- POST /api/auth/register - Đăng ký tài khoản
+- POST /api/auth/login - Đăng nhập
+- POST /api/auth/refresh-token - Làm mới token
+- GET /api/auth/me - Lấy thông tin người dùng hiện tại
+
+### Quản lý người dùng
+- GET /api/users - Lấy danh sách người dùng (ADMIN)
+- GET /api/users/{id} - Lấy thông tin người dùng
+- PUT /api/users/{id} - Cập nhật thông tin người dùng
+- DELETE /api/users/{id} - Xóa người dùng (ADMIN)
+- POST /api/users/{id}/upload-avatar - Tải lên ảnh đại diện
+
+### Quản lý chuyên viên
+- GET /api/specialists - Lấy danh sách chuyên viên
+- GET /api/specialists/{id} - Lấy thông tin chuyên viên
+- POST /api/specialists - Thêm chuyên viên mới (ADMIN)
+- PUT /api/specialists/{id} - Cập nhật thông tin chuyên viên
+- DELETE /api/specialists/{id} - Xóa chuyên viên (ADMIN)
+
+### Quản lý dịch vụ
+- GET /api/services - Lấy danh sách dịch vụ
+- GET /api/services/{id} - Lấy thông tin dịch vụ
+- POST /api/services - Thêm dịch vụ mới (ADMIN)
+- PUT /api/services/{id} - Cập nhật thông tin dịch vụ
+- DELETE /api/services/{id} - Xóa dịch vụ (ADMIN)
+
+### Quản lý danh mục
+- GET /api/service-categories - Lấy danh sách danh mục dịch vụ
+- GET /api/service-categories/{id} - Lấy thông tin danh mục dịch vụ
+- POST /api/service-categories - Thêm danh mục mới (ADMIN)
+- PUT /api/service-categories/{id} - Cập nhật thông tin danh mục
+- DELETE /api/service-categories/{id} - Xóa danh mục (ADMIN)
+
+### Quản lý lịch đặt
+- GET /api/bookings - Lấy danh sách lịch đặt
+- GET /api/bookings/{id} - Lấy thông tin lịch đặt
+- POST /api/bookings - Tạo lịch đặt mới
+- PUT /api/bookings/{id} - Cập nhật lịch đặt
+- PUT /api/bookings/{id}/status - Cập nhật trạng thái lịch đặt
+- DELETE /api/bookings/{id} - Hủy lịch đặt
+
+### Quản lý lịch làm việc
+- GET /api/schedules - Lấy danh sách lịch làm việc
+- GET /api/schedules/specialist/{specialistId} - Lấy lịch làm việc của chuyên viên
+- GET /api/schedules/date/{date} - Lấy lịch làm việc theo ngày
+- POST /api/schedules - Tạo lịch làm việc mới
+- PUT /api/schedules/{id} - Cập nhật lịch làm việc
+- DELETE /api/schedules/{id} - Xóa lịch làm việc
+
+### Quản lý giao dịch
+- GET /api/transactions - Lấy danh sách giao dịch
+- GET /api/transactions/{id} - Lấy thông tin giao dịch
+- POST /api/transactions - Tạo giao dịch mới
+- PUT /api/transactions/{id}/status - Cập nhật trạng thái giao dịch
+- GET /api/transactions/export - Xuất báo cáo giao dịch (Excel)
+
+### Quản lý blog
+- GET /api/blogs - Lấy danh sách bài viết
+- GET /api/blogs/{id} - Lấy thông tin bài viết
+- POST /api/blogs - Tạo bài viết mới
+- PUT /api/blogs/{id} - Cập nhật bài viết
+- DELETE /api/blogs/{id} - Xóa bài viết
+- GET /api/blog-categories - Lấy danh sách danh mục bài viết
+
+### Phản hồi & Đánh giá
+- GET /api/feedback - Lấy danh sách phản hồi
+- POST /api/feedback - Tạo phản hồi mới
+- PUT /api/feedback/{id}/response - Trả lời phản hồi
+
+### Thông báo
+- GET /api/notifications - Lấy danh sách thông báo
+- PUT /api/notifications/{id}/read - Đánh dấu đã đọc
+- DELETE /api/notifications/{id} - Xóa thông báo
+
+## Tính năng bảo mật
+1. **JWT Authentication**
+   - Access Token và Refresh Token
+   - Token expiration
+   - Token blacklisting
+
+2. **Role-Based Access Control**
+   - Phân quyền dựa trên vai trò (ADMIN, STAFF, CUSTOMER)
+   - Method-level security với @PreAuthorize
+
+3. **Password Security**
+   - Mã hóa mật khẩu với BCrypt
+   - Validation mật khẩu mạnh
+
+4. **CORS Configuration**
+   - Cấu hình Cross-Origin Resource Sharing
+
+5. **XSS Protection**
+   - Input validation
+   - Output encoding
+
+## Xử lý lỗi & Exception
+- Định nghĩa các custom exception
+- Global Exception Handler
+- Phản hồi chuẩn hóa cho lỗi
+
+## Tính năng bổ sung
+1. **Email Service**
+   - Gửi email xác nhận đặt lịch
+   - Nhắc nhở lịch hẹn
+   - Khôi phục mật khẩu
+
+2. **File Upload**
+   - Upload và lưu trữ hình ảnh
+   - Tạo thumbnails
+
+3. **Backup & Restore**
+   - Sao lưu tự động cơ sở dữ liệu
+   - Khôi phục dữ liệu
+
+4. **Logging & Monitoring**
+   - Sử dụng SLF4J và Logback
+   - Ghi log hoạt động người dùng
+   - Ghi log lỗi hệ thống
+
+5. **Caching**
+   - Sử dụng Spring Cache
+   - Redis để lưu trữ cache
+
+6. **Payment Integration**
+   - Kết nối với VNPay, MoMo, Stripe, PayPal
+   - Xử lý giao dịch an toàn
+
+7. **Reports & Analytics**
+   - Báo cáo doanh thu
+   - Thống kê khách hàng
+   - Biểu đồ phân tích
+
+## Tối ưu hóa hiệu suất
+1. **Database Optimization**
+   - Indexing
+   - Query optimization
+   - Connection pooling
+
+2. **Application Caching**
+   - Entity caching
+   - Query result caching
+
+3. **N+1 Query Prevention**
+   - Eager loading khi cần thiết
+   - EntityGraph
+
+4. **Pagination & Sorting**
+   - Implement cho tất cả API danh sách
+
+## Môi trường triển khai
+1. **Development**
+   - H2 Database
+   - Profile cấu hình riêng
+
+2. **Production**
+   - MySQL/PostgreSQL
+   - AWS/Azure/GCP
+   - Docker containerization
+   - CI/CD pipeline
+
+## Testing
+1. **Unit Tests**
+   - JUnit 5
+   - Mockito
+
+2. **Integration Tests**
+   - Spring Test
+   - TestContainers
+
+3. **API Tests**
+   - Postman Collections
+   - REST Assured
+
+4. **Security Tests**
+   - Penetration Testing
+   - OWASP ZAP
+
+## Tài liệu
+1. **API Documentation**
+   - OpenAPI (Swagger)
+   - README chi tiết
+
+2. **Code Documentation**
+   - Javadoc
+   - Inline comments
+
+3. **Database Diagram**
+   - ERD
+   - Schema documentation

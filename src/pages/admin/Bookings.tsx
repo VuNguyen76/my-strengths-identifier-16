@@ -32,7 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { format, addHours, startOfToday } from "date-fns";
-import { Search, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Plus, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 
@@ -193,6 +193,35 @@ const AdminBookings = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+
+  // Function to handle status change
+  const changeBookingStatus = (id: string, newStatus: "confirmed" | "completed" | "cancelled") => {
+    const updatedBookings = bookings.map(booking => {
+      if (booking.id === id) {
+        return { ...booking, status: newStatus };
+      }
+      return booking;
+    });
+    
+    setBookings(updatedBookings);
+    
+    const statusMessages = {
+      confirmed: "Lịch đặt đã được xác nhận!",
+      completed: "Lịch đặt đã được đánh dấu hoàn thành!",
+      cancelled: "Lịch đặt đã bị hủy!"
+    };
+    
+    toast.success(statusMessages[newStatus]);
+  };
+
+  // Function to view booking details
+  const viewBookingDetails = (id: string) => {
+    const booking = bookings.find(b => b.id === id);
+    if (booking) {
+      toast.info(`Xem chi tiết lịch đặt: ${booking.customer} - ${booking.service}`);
+      // In a real application, this would open a detailed view or modal
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -457,20 +486,44 @@ const AdminBookings = () => {
                           <div className="flex justify-end space-x-2">
                             {booking.status === "pending" && (
                               <>
-                                <Button size="sm" variant="outline">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => changeBookingStatus(booking.id, "confirmed")}
+                                  className="flex items-center gap-1"
+                                >
+                                  <CheckCircle size={14} />
                                   Xác nhận
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-red-500">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => changeBookingStatus(booking.id, "cancelled")}
+                                  className="text-red-500 flex items-center gap-1"
+                                >
+                                  <XCircle size={14} />
                                   Hủy
                                 </Button>
                               </>
                             )}
                             {booking.status === "confirmed" && (
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => changeBookingStatus(booking.id, "completed")}
+                                className="flex items-center gap-1"
+                              >
+                                <CheckCircle size={14} />
                                 Hoàn thành
                               </Button>
                             )}
-                            <Button size="sm" variant="ghost">
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => viewBookingDetails(booking.id)}
+                              className="flex items-center gap-1"
+                            >
+                              <AlertCircle size={14} />
                               Chi tiết
                             </Button>
                           </div>

@@ -178,6 +178,16 @@ const Schedule = () => {
     }
   };
 
+  // Function to add/edit schedule for a specific specialist
+  const handleSpecialistSchedule = (specialistId: string) => {
+    form.reset({
+      specialistId: specialistId,
+      date: new Date(),
+      slots: [],
+    });
+    setIsAddDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -295,14 +305,7 @@ const Schedule = () => {
                       <CardDescription>{specialist.role}</CardDescription>
                     </div>
                     <Button
-                      onClick={() => {
-                        form.reset({
-                          specialistId: specialist.id,
-                          date: new Date(),
-                          slots: [],
-                        });
-                        setIsAddDialogOpen(true);
-                      }}
+                      onClick={() => handleSpecialistSchedule(specialist.id)}
                       variant="outline"
                       size="sm"
                     >
@@ -325,14 +328,30 @@ const Schedule = () => {
                               <h3 className="font-medium">
                                 {format(new Date(schedule.date), "EEEE, dd/MM/yyyy", { locale: vi })}
                               </h3>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() => openDeleteDialog(schedule)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    form.reset({
+                                      specialistId: schedule.specialistId,
+                                      date: new Date(schedule.date),
+                                      slots: schedule.slots,
+                                    });
+                                    setIsAddDialogOpen(true);
+                                  }}
+                                >
+                                  Sửa
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => openDeleteDialog(schedule)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             <div className="flex flex-wrap gap-2 mt-2">
                               {schedule.slots.map((slot) => (
