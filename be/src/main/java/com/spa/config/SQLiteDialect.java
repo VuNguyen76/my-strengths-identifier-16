@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class SQLiteConfig {
     
     @Bean
-    public org.hibernate.community.dialect.SQLiteDialect sqliteDialect() {
+    public SQLiteDialect sqliteDialect() {
         return new SQLiteDialect();
     }
 }
