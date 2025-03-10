@@ -1,87 +1,114 @@
 
 # Spa Management System
 
-This application consists of a React frontend and a Java Spring Boot backend with SQLite database.
-
-## Prerequisites
-
-- Java 17 or higher
-- Node.js 16 or higher
-- NPM or Yarn
-- Maven (or use the included Maven wrapper)
+This project is a comprehensive Spa Management System with separate frontend and backend.
 
 ## Project Structure
 
-- `/be` - Contains the Spring Boot backend
-- `/src` - Contains the React frontend
+The project is organized into two main parts:
+- Frontend: React application with TypeScript
+- Backend: Spring Boot REST API
 
-## Running the Application
+## Getting Started
 
-### Option 1: Use the run script (Linux/Mac)
+### Prerequisites
 
-Make the script executable first:
+- Node.js 16+ and npm
+- Java 17 or higher
+- Maven 3.6+
 
-```bash
-chmod +x run.sh
-```
+### Running the Backend
 
-Then run it:
-
-```bash
-./run.sh
-```
-
-### Option 2: Run Backend and Frontend separately
-
-#### Backend:
-
+1. Navigate to the backend directory:
 ```bash
 cd be
+```
+
+2. Build and run the Spring Boot application:
+```bash
 ./mvnw spring-boot:run
 ```
 
-The backend will start on http://localhost:8081/api
-
-#### Frontend:
-
+Or on Windows:
 ```bash
-npm install (first time only)
+mvnw.cmd spring-boot:run
+```
+
+The backend will start on http://localhost:8081
+
+### Running the Frontend
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the development server:
+```bash
 npm run dev
 ```
 
-The frontend will start on http://localhost:8080
+The frontend will be available at http://localhost:3000
 
-## API Documentation
+## Development Guidelines
 
-Once the backend is running, you can access the Swagger UI at:
+### Frontend
 
-http://localhost:8081/api/swagger-ui
+- The project uses React with TypeScript
+- UI components are built using the shadcn/ui library
+- Styling is done with Tailwind CSS
+- Data fetching is handled by React Query
 
-## Default Admin Account
+### Backend
 
-Username: admin
-Password: admin123
+- The backend is built with Spring Boot 3
+- Data persistence is handled with JPA/Hibernate and SQLite
+- Authentication is implemented using JWT
+- API documentation is available through Swagger UI (http://localhost:8081/swagger-ui/index.html)
 
-## Default Staff Account
+## Testing
 
-Username: staff
-Password: staff123
+### Frontend
 
-## Database
+```bash
+npm run test
+```
 
-The application uses SQLite, so no external database setup is required. The database file will be created automatically in the root directory as `spa.db`.
+### Backend
 
-## Features
+```bash
+cd be
+./mvnw test
+```
 
-- User authentication with JWT
-- Role-based access control
-- Service booking and management
-- Staff and specialist management
-- Transaction tracking
-- Reports and analytics
+## Building for Production
 
-## Notes
+### Frontend
 
-- The frontend and backend are completely decoupled
-- All API requests from the frontend to the backend include the JWT token for authentication
-- Database is SQLite for easy portability and setup
+```bash
+npm run build
+```
+
+### Backend
+
+```bash
+cd be
+./mvnw package
+```
+
+This will generate a JAR file in the `target` directory that can be deployed.
+
+## API Endpoints
+
+The main API endpoints are:
+
+- Authentication: `/api/auth/*`
+- Services: `/api/services/*`
+- Specialists: `/api/specialists/*`
+- Bookings: `/api/bookings/*`
+- Users: `/api/users/*`
+- Admin endpoints: `/api/admin/*`
+
+## License
+
+This project is licensed under the MIT License

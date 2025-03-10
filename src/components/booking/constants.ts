@@ -1,10 +1,6 @@
 
 // Constants for booking system - these will be populated from API
 
-export const SERVICES = [];
-
-export const SPECIALISTS = [];
-
 export const TIME_SLOTS = [
   "09:00", "10:00", "11:00",
   "14:00", "15:00", "16:00", "17:00"
